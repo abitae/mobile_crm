@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/project_model.dart';
 import '../../providers/project_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
+import '../../../config/api_config.dart';
 import 'package:intl/intl.dart';
 
 /// Pantalla de detalle de proyecto
@@ -47,26 +49,32 @@ class ProjectDetailScreen extends ConsumerWidget {
         children: [
           // Imagen de portada (si existe)
           if (project.pathImagePortada != null)
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant,
-                image: project.pathImagePortada != null
-                    ? DecorationImage(
-                        image: NetworkImage(project.pathImagePortada!),
-                        fit: BoxFit.cover,
-                        onError: (_, __) {},
-                      )
-                    : null,
-              ),
-              child: project.pathImagePortada == null
-                  ? Icon(
-                      Icons.image_outlined,
-                      size: 64,
-                      color: colorScheme.onSurfaceVariant,
-                    )
-                  : null,
+            FutureBuilder<String>(
+              future: ApiConfigService.buildResourceUrl(project.pathImagePortada),
+              builder: (context, snapshot) {
+                final imageUrl = snapshot.data ?? '';
+                return Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceVariant,
+                    image: imageUrl.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(imageUrl),
+                            fit: BoxFit.cover,
+                            onError: (_, __) {},
+                          )
+                        : null,
+                  ),
+                  child: imageUrl.isEmpty
+                      ? Icon(
+                          Icons.image_outlined,
+                          size: 64,
+                          color: colorScheme.onSurfaceVariant,
+                        )
+                      : null,
+                );
+              },
             ),
 
           Padding(
@@ -123,24 +131,23 @@ class ProjectDetailScreen extends ConsumerWidget {
                       Icon(Icons.location_on, color: colorScheme.primary),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          project.fullAddress ?? 
-                          '${project.district ?? ''}, ${project.province ?? ''}, ${project.region ?? ''}',
-                          style: theme.textTheme.bodyMedium,
+                        child: InkWell(
+                          onTap: () => _openLocation(context, project),
+                          child: Text(
+                            project.fullAddress ?? 
+                            '${project.district ?? ''}, ${project.province ?? ''}, ${project.region ?? ''}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
                       ),
-                      if (project.ubicacion != null)
-                        IconButton(
-                          icon: const Icon(Icons.map_outlined),
-                          onPressed: () {
-                            // TODO: Implementar url_launcher cuando se agregue la dependencia
-                            // final uri = Uri.parse(project.ubicacion!);
-                            // if (await canLaunchUrl(uri)) {
-                            //   await launchUrl(uri, mode: LaunchMode.externalApplication);
-                            // }
-                          },
-                          tooltip: 'Ver en mapa',
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.map_outlined),
+                        onPressed: () => _openLocation(context, project),
+                        tooltip: 'Ver en Google Maps',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -441,6 +448,76 @@ class ProjectDetailScreen extends ConsumerWidget {
       'financiado': 'Financiado',
     };
     return labels[tipo.toLowerCase()] ?? tipo;
+  }
+
+  Future<void> _openLocation(BuildContext context, ProjectModel project) async {
+    try {
+      Uri? uri;
+
+      // Si hay una URL de ubicación directa, usarla
+      if (project.ubicacion != null && project.ubicacion!.isNotEmpty) {
+        final ubicacionUrl = project.ubicacion!;
+        // Si ya es una URL completa, usarla directamente
+        if (ubicacionUrl.startsWith('http://') || ubicacionUrl.startsWith('https://')) {
+          uri = Uri.parse(ubicacionUrl);
+        } else if (ubicacionUrl.startsWith('geo:')) {
+          // Formato geo:lat,lng
+          uri = Uri.parse(ubicacionUrl);
+        } else {
+          // Si es solo coordenadas o dirección, construir URL de Google Maps
+          uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(ubicacionUrl)}');
+        }
+      }
+      // Si hay coordenadas, usar coordenadas
+      else if (project.coordinates != null && 
+               project.coordinates!['lat'] != null && 
+               project.coordinates!['lng'] != null) {
+        final lat = project.coordinates!['lat']!;
+        final lng = project.coordinates!['lng']!;
+        uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+      }
+      // Si hay dirección completa, buscar por dirección
+      else if (project.fullAddress != null && project.fullAddress!.isNotEmpty) {
+        uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(project.fullAddress!)}');
+      }
+      // Si hay distrito, provincia, región, construir dirección
+      else if (project.district != null || project.province != null || project.region != null) {
+        final address = '${project.district ?? ''}, ${project.province ?? ''}, ${project.region ?? ''}'.trim();
+        if (address.isNotEmpty) {
+          uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+        }
+      }
+
+      if (uri != null) {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se pudo abrir Google Maps'),
+              ),
+            );
+          }
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay información de ubicación disponible'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir la ubicación: $e'),
+          ),
+        );
+      }
+    }
   }
 }
 

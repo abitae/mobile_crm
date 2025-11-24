@@ -14,7 +14,7 @@ class App extends ConsumerWidget {
     final router = ref.watch(routesProvider);
 
     return MaterialApp.router(
-      title: 'CRM Cazador',
+      title: 'LER Cazador',
       theme: AppTheme.lightTheme,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

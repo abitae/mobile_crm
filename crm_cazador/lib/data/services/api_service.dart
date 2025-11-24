@@ -38,22 +38,36 @@ class ApiService {
       onError: (error, handler) async {
         // Manejar 401 (token expirado o inválido) - intentar refresh token
         if (error.response?.statusCode == 401) {
-          try {
-            final newToken = await AuthService.refreshToken();
-            if (newToken != null) {
-              // Reintentar la petición original con el nuevo token
-              final opts = error.requestOptions;
-              opts.headers['Authorization'] = 'Bearer $newToken';
-              
-              try {
-                final response = await _dio!.fetch(opts);
-                return handler.resolve(response);
-              } catch (e) {
-                // Si el reintento falla, continuar con el error original
+          // Evitar loops infinitos: solo intentar refresh si no es una petición de refresh
+          final requestPath = error.requestOptions.path;
+          if (!requestPath.contains('/auth/refresh') && 
+              !requestPath.contains('/auth/login')) {
+            try {
+              final newToken = await AuthService.refreshToken();
+              if (newToken != null) {
+                // Reintentar la petición original con el nuevo token
+                final opts = error.requestOptions;
+                opts.headers['Authorization'] = 'Bearer $newToken';
+                
+                try {
+                  final response = await _dio!.fetch(opts);
+                  return handler.resolve(response);
+                } catch (e) {
+                  // Si el reintento falla, el token es inválido
+                  // Limpiar tokens y dejar que el error se propague
+                  await StorageService.deleteToken();
+                  await StorageService.deleteRefreshToken();
+                }
+              } else {
+                // Si no hay nuevo token, limpiar tokens almacenados
+                await StorageService.deleteToken();
+                await StorageService.deleteRefreshToken();
               }
+            } catch (e) {
+              // Si el refresh falla completamente, limpiar tokens
+              await StorageService.deleteToken();
+              await StorageService.deleteRefreshToken();
             }
-          } catch (e) {
-            // Si el refresh falla, continuar con el error original
           }
         }
         return handler.next(error);

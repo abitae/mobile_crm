@@ -35,8 +35,12 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent * 0.8) {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    
+    if (currentScroll >= maxScroll * 0.8 && maxScroll > 0) {
       ref.read(clientsNotifierProvider).loadMoreClients();
     }
   }
@@ -53,7 +57,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clientsState = ref.watch(clientsProvider);
+    final clientsState = ref.watch(clientsNotifierProvider).currentState;
 
     return Scaffold(
       appBar: AppBar(
@@ -172,7 +176,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
   }
 
   void _showFilterBottomSheet(BuildContext context) {
-    final clientsState = ref.read(clientsProvider);
+    final clientsState = ref.read(clientsNotifierProvider).currentState;
     final optionsAsync = ref.watch(clientOptionsProvider);
 
     showModalBottomSheet(

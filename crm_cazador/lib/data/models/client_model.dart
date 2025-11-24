@@ -47,10 +47,14 @@ class ClientModel {
   });
 
   factory ClientModel.fromJson(Map<String, dynamic> json) {
+    // Normalizar documentType a 'DNI' siempre
+    final docType = json['document_type'] as String? ?? 'DNI';
+    final normalizedDocType = docType.toUpperCase() == 'DNI' ? 'DNI' : 'DNI';
+    
     return ClientModel(
       id: json['id'] as int,
       name: json['name'] as String,
-      documentType: json['document_type'] as String,
+      documentType: normalizedDocType,
       documentNumber: json['document_number'] as String,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
@@ -101,6 +105,9 @@ class ClientModel {
   Map<String, dynamic> toPartialJson() {
     final map = <String, dynamic>{};
     if (name.isNotEmpty) map['name'] = name;
+    // document_type y document_number son obligatorios al actualizar
+    map['document_type'] = documentType;
+    map['document_number'] = documentNumber;
     if (phone != null && phone!.isNotEmpty) map['phone'] = phone;
     if (email != null && email!.isNotEmpty) map['email'] = email;
     if (address != null && address!.isNotEmpty) map['address'] = address;

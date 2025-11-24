@@ -23,7 +23,7 @@ class ClientCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -31,123 +31,156 @@ class ClientCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
             children: [
-              // Header con nombre y estado
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      client.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  _StatusChip(status: client.status),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Información del cliente
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.dni,
-                    size: 16,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${client.documentType}: ${client.documentNumber}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-              if (client.phone != null) ...[
-                const SizedBox(height: 4),
-                Row(
+              // Información principal
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      AppIcons.phone,
-                      size: 16,
-                      color: AppColors.onSurfaceVariant,
+                    // Nombre y estado en una línea
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            client.name,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _StatusChip(status: client.status),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      client.phone!,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    const SizedBox(height: 6),
+                    // DNI y teléfono en una línea compacta
+                    Row(
+                      children: [
+                        Icon(
+                          AppIcons.dni,
+                          size: 14,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          client.documentNumber,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                          ),
+                        ),
+                        if (client.phone != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            AppIcons.phone,
+                            size: 14,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              client.phone!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-              ],
-
-              const SizedBox(height: 12),
-
-              // Footer con acciones y métricas
-              Row(
+              ),
+              const SizedBox(width: 8),
+              // Score y contadores compactos
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Score
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: _getScoreColor(client.score).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           AppIcons.score,
-                          size: 14,
+                          size: 12,
                           color: _getScoreColor(client.score),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Text(
                           '${client.score}',
                           style: TextStyle(
                             color: _getScoreColor(client.score),
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  const Spacer(),
-
-                  // Contadores con Badge Material 3
-                  if ((client.opportunitiesCount ?? 0) > 0)
-                    Badge(
-                      label: Text('${client.opportunitiesCount}'),
-                      child: Icon(
-                        MdiIcons.briefcase,
-                        size: 18,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  if ((client.activitiesCount ?? 0) > 0) ...[
-                    const SizedBox(width: 8),
-                    Badge(
-                      label: Text('${client.activitiesCount}'),
-                      child: Icon(
-                        MdiIcons.calendarCheck,
-                        size: 18,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  if ((client.tasksCount ?? 0) > 0) ...[
-                    const SizedBox(width: 8),
-                    Badge(
-                      label: Text('${client.tasksCount}'),
-                      child: Icon(
-                        MdiIcons.checkCircle,
-                        size: 18,
-                        color: AppColors.onSurfaceVariant,
-                      ),
+                  // Contadores en una línea
+                  if ((client.opportunitiesCount ?? 0) > 0 ||
+                      (client.activitiesCount ?? 0) > 0 ||
+                      (client.tasksCount ?? 0) > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if ((client.opportunitiesCount ?? 0) > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Badge(
+                              label: Text(
+                                '${client.opportunitiesCount}',
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                              child: Icon(
+                                MdiIcons.briefcase,
+                                size: 14,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        if ((client.activitiesCount ?? 0) > 0)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Badge(
+                              label: Text(
+                                '${client.activitiesCount}',
+                                style: const TextStyle(fontSize: 9),
+                              ),
+                              child: Icon(
+                                MdiIcons.calendarCheck,
+                                size: 14,
+                                color: AppColors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        if ((client.tasksCount ?? 0) > 0)
+                          Badge(
+                            label: Text(
+                              '${client.tasksCount}',
+                              style: const TextStyle(fontSize: 9),
+                            ),
+                            child: Icon(
+                              MdiIcons.checkCircle,
+                              size: 14,
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ],
@@ -177,18 +210,19 @@ class _StatusChip extends StatelessWidget {
     return Chip(
       label: Text(
         _getStatusLabel(status),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
       ),
       backgroundColor: color.withOpacity(0.1),
       labelStyle: TextStyle(color: color),
       avatar: Icon(
         _getStatusIcon(status),
-        size: 16,
+        size: 12,
         color: color,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      side: BorderSide(color: color.withOpacity(0.3)),
+      side: BorderSide(color: color.withOpacity(0.3), width: 0.5),
+      visualDensity: VisualDensity.compact,
     );
   }
 

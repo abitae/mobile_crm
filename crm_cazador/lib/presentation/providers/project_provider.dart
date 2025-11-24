@@ -490,9 +490,12 @@ final projectUnitsNotifierProvider = Provider.family<ProjectUnitsNotifier, int>(
   return notifier;
 });
 
-/// Provider de estado de unidades
+/// Provider de estado de unidades (reactivo)
+/// Observa el notifier y accede al estado actual
 final projectUnitsProvider = Provider.family<ProjectUnitsState, int>((ref, projectId) {
-  final notifier = ref.watch(projectUnitsNotifierProvider(projectId));
-  return notifier.currentState;
+  // Observar el notifier para que el provider se actualice cuando cambie
+  ref.watch(projectUnitsNotifierProvider(projectId));
+  // Retornar el estado actual
+  return ref.read(projectUnitsNotifierProvider(projectId)).currentState;
 });
 

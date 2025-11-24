@@ -8,6 +8,8 @@ import '../../presentation/screens/projects/project_units_screen.dart';
 import '../../presentation/screens/clients/clients_list_screen.dart';
 import '../../presentation/screens/clients/client_detail_screen.dart';
 import '../../presentation/screens/clients/client_form_screen.dart';
+import '../../presentation/screens/settings/settings_screen.dart';
+import '../../presentation/screens/settings/api_config_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,6 +99,16 @@ final routesProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return ClientDetailScreen(clientId: id);
         },
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/api',
+        name: 'api-config',
+        builder: (context, state) => const ApiConfigScreen(),
       ),
     ],
   );

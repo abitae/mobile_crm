@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/ler_logo.dart';
 
 /// Pantalla de splash (inicial)
 class SplashScreen extends ConsumerStatefulWidget {
@@ -19,8 +20,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2));
-
+    // Esperar a que el AuthNotifier termine de verificar la autenticación
+    final authNotifier = ref.read(authNotifierProvider);
+    
+    // Esperar hasta que termine de cargar o máximo 3 segundos
+    int attempts = 0;
+    while (authNotifier.currentState.isLoading && attempts < 30) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+      if (!mounted) return;
+    }
+    
+    // Esperar un poco más para asegurar que el estado se propague
+    await Future.delayed(const Duration(milliseconds: 300));
+    
     if (!mounted) return;
 
     final authState = ref.read(authProvider);
@@ -34,30 +47,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.business,
-              size: 100,
-              color: Theme.of(context).colorScheme.onPrimary,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'CRM Datero',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
+            const LerLogo(
+              height: 140,
+              showTagline: true,
+              appName: 'LER Datero',
             ),
             const SizedBox(height: 48),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
+            const CircularProgressIndicator(),
           ],
         ),
       ),

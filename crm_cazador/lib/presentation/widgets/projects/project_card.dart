@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/project_model.dart';
 
 /// Widget para mostrar una tarjeta de proyecto
@@ -93,18 +94,35 @@ class ProjectCard extends StatelessWidget {
                       Icon(
                         Icons.location_on_outlined,
                         size: 16,
-                        color: colorScheme.onSurfaceVariant,
+                        color: colorScheme.primary,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
-                        child: Text(
-                          project.fullAddress ?? 
-                          '${project.district ?? ''}, ${project.province ?? ''}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                        child: GestureDetector(
+                          onTap: () => _openLocation(context, project),
+                          behavior: HitTestBehavior.opaque,
+                          child: Text(
+                            project.fullAddress ?? 
+                            '${project.district ?? ''}, ${project.province ?? ''}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.primary,
+                              decoration: TextDecoration.underline,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => _openLocation(context, project),
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            Icons.map_outlined,
+                            size: 18,
+                            color: colorScheme.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -348,6 +366,76 @@ class ProjectCard extends StatelessWidget {
       'habilitado': 'Habilitado',
     };
     return labels[status.toLowerCase()] ?? status;
+  }
+
+  Future<void> _openLocation(BuildContext context, ProjectModel project) async {
+    try {
+      Uri? uri;
+
+      // Si hay una URL de ubicación directa, usarla
+      if (project.ubicacion != null && project.ubicacion!.isNotEmpty) {
+        final ubicacionUrl = project.ubicacion!;
+        // Si ya es una URL completa, usarla directamente
+        if (ubicacionUrl.startsWith('http://') || ubicacionUrl.startsWith('https://')) {
+          uri = Uri.parse(ubicacionUrl);
+        } else if (ubicacionUrl.startsWith('geo:')) {
+          // Formato geo:lat,lng
+          uri = Uri.parse(ubicacionUrl);
+        } else {
+          // Si es solo coordenadas o dirección, construir URL de Google Maps
+          uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(ubicacionUrl)}');
+        }
+      }
+      // Si hay coordenadas, usar coordenadas
+      else if (project.coordinates != null && 
+               project.coordinates!['lat'] != null && 
+               project.coordinates!['lng'] != null) {
+        final lat = project.coordinates!['lat']!;
+        final lng = project.coordinates!['lng']!;
+        uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+      }
+      // Si hay dirección completa, buscar por dirección
+      else if (project.fullAddress != null && project.fullAddress!.isNotEmpty) {
+        uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(project.fullAddress!)}');
+      }
+      // Si hay distrito, provincia, región, construir dirección
+      else if (project.district != null || project.province != null || project.region != null) {
+        final address = '${project.district ?? ''}, ${project.province ?? ''}, ${project.region ?? ''}'.trim();
+        if (address.isNotEmpty) {
+          uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+        }
+      }
+
+      if (uri != null) {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se pudo abrir Google Maps'),
+              ),
+            );
+          }
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay información de ubicación disponible'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir la ubicación: $e'),
+          ),
+        );
+      }
+    }
   }
 }
 

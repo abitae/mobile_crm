@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_icons.dart';
+import '../../widgets/common/ler_logo.dart';
 
 /// Pantalla de login
 class LoginScreen extends ConsumerStatefulWidget {
@@ -127,10 +128,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    AppIcons.login,
-                    size: 80,
-                    color: Theme.of(context).colorScheme.primary,
+                  const LerLogo(
+                    height: 100,
+                    showTagline: false,
+                    appName: 'LER Datero',
                   ),
                   const SizedBox(height: 32),
                   Text(
@@ -157,7 +158,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Por favor ingresa tu email';
                       }
-                      if (!value.contains('@')) {
+                      // Validación de email más robusta
+                      final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(value.trim())) {
                         return 'Email inválido';
                       }
                       return null;

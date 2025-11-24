@@ -35,8 +35,9 @@ class _ProjectUnitsScreenState extends ConsumerState<ProjectUnitsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent * 0.8) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent * 0.8) {
       ref.read(projectUnitsNotifierProvider(widget.projectId)).loadMoreUnits();
     }
   }

@@ -96,5 +96,40 @@ class ApiConfigService {
       return false;
     }
   }
+
+  // Obtener URL base sin /api para recursos estáticos (imágenes, videos, documentos)
+  static Future<String> getResourceBaseUrl() async {
+    final baseUrl = await getBaseUrl();
+    // Remover /api del final si está presente
+    if (baseUrl.endsWith('/api')) {
+      return baseUrl.substring(0, baseUrl.length - 4);
+    } else if (baseUrl.endsWith('/api/')) {
+      return baseUrl.substring(0, baseUrl.length - 5);
+    }
+    return baseUrl;
+  }
+
+  // Construir URL completa para un recurso (imagen, video, documento)
+  static Future<String> buildResourceUrl(String? path) async {
+    if (path == null || path.isEmpty) {
+      return '';
+    }
+    
+    // Si ya es una URL completa, retornarla tal cual
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    
+    // Si es una ruta relativa, construir la URL completa
+    final resourceBaseUrl = await getResourceBaseUrl();
+    final normalizedBase = resourceBaseUrl.endsWith('/') 
+        ? resourceBaseUrl.substring(0, resourceBaseUrl.length - 1)
+        : resourceBaseUrl;
+    
+    // Asegurar que el path comience con /
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    
+    return '$normalizedBase$normalizedPath';
+  }
 }
 
