@@ -53,7 +53,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clientsState = ref.watch(clientsProvider);
+    final clientsState = ref.watch(clientsNotifierProvider).currentState;
 
     return Scaffold(
       appBar: AppBar(

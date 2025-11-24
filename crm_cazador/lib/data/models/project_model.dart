@@ -108,7 +108,7 @@ class ProjectModel {
       ubicacion: json['ubicacion'] as String?,
       fullAddress: json['full_address'] as String?,
       coordinates: json['coordinates'] != null
-          ? Map<String, double>.from(json['coordinates'] as Map)
+          ? _parseCoordinates(json['coordinates'] as Map)
           : null,
       totalUnits: json['total_units'] as int? ?? 0,
       availableUnits: json['available_units'] as int? ?? 0,
@@ -147,6 +147,23 @@ class ProjectModel {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
+  }
+
+  /// Parsear coordenadas manejando valores null
+  static Map<String, double>? _parseCoordinates(Map coordinates) {
+    final lat = coordinates['lat'];
+    final lng = coordinates['lng'];
+    
+    // Si ambos son null, retornar null
+    if (lat == null && lng == null) {
+      return null;
+    }
+    
+    // Si al menos uno tiene valor, crear el mapa
+    return {
+      if (lat != null) 'lat': (lat as num).toDouble(),
+      if (lng != null) 'lng': (lng as num).toDouble(),
+    };
   }
 }
 

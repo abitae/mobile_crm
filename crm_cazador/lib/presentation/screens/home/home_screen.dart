@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../projects/projects_list_screen.dart';
+import '../clients/clients_list_screen.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
 class HomeScreen extends StatefulWidget {
@@ -60,9 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
       case 0:
         return _buildHomeContent();
       case 1:
-        return _buildClientsPlaceholder();
+        return const ClientsListScreen();
       case 2:
-        return _buildProjectsPlaceholder();
+        return const ProjectsListScreen();
       default:
         return _buildHomeContent();
     }
@@ -137,9 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: 'Explora proyectos disponibles',
               color: colorScheme.secondary,
               onTap: () {
-                setState(() {
-                  _selectedIndex = 2;
-                });
+                context.push('/projects');
               },
             ),
           ],
@@ -148,33 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildClientsPlaceholder() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.people_outlined, size: 64),
-          SizedBox(height: 16),
-          Text('Pantalla de Clientes'),
-          Text('(Próximamente)'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProjectsPlaceholder() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.business_outlined, size: 64),
-          SizedBox(height: 16),
-          Text('Pantalla de Proyectos'),
-          Text('(Próximamente)'),
-        ],
-      ),
-    );
-  }
 }
 
 class _ActionCard extends StatelessWidget {

@@ -1,0 +1,49 @@
+{
+    // Use IntelliSense para saber los atributos posibles.
+    // Mantenga el puntero para ver las descripciones de los existentes atributos.
+    // Para más información, visite: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "name": "crm_cazador",
+            "cwd": "crm_cazador",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "crm_cazador (profile mode)",
+            "cwd": "crm_cazador",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "crm_cazador (release mode)",
+            "cwd": "crm_cazador",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "crm_datero",
+            "cwd": "crm_datero",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "crm_datero (profile mode)",
+            "cwd": "crm_datero",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "crm_datero (release mode)",
+            "cwd": "crm_datero",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

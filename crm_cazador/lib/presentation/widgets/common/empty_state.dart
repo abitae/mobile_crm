@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_icons.dart';
 
 /// Widget de estado vacío
 class EmptyState extends StatelessWidget {
@@ -45,7 +46,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: action,
-                icon: const Icon(Icons.add),
+                icon: Icon(AppIcons.addClient),
                 label: Text(actionLabel!),
               ),
             ],
