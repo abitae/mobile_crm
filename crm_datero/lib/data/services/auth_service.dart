@@ -181,5 +181,53 @@ class AuthService {
       return null;
     }
   }
+
+  /// Cambiar contraseña del usuario
+  static Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String newPasswordConfirmation,
+  }) async {
+    try {
+      await ApiService.post(
+        '/datero/auth/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+          'new_password_confirmation': newPasswordConfirmation,
+        },
+      );
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      String? errorMessage;
+      
+      if (responseData is Map<String, dynamic>) {
+        errorMessage = responseData['message'] as String?;
+        
+        // Si hay errores de validación, extraer el primer error
+        if (responseData['errors'] != null) {
+          final errors = responseData['errors'] as Map<String, dynamic>?;
+          if (errors != null && errors.isNotEmpty) {
+            final firstErrorList = errors.values.first;
+            if (firstErrorList is List && firstErrorList.isNotEmpty) {
+              errorMessage = firstErrorList.first.toString();
+            }
+          }
+        }
+      }
+
+      if (e.response?.statusCode == 401) {
+        throw ApiException(errorMessage ?? 'Usuario no autenticado');
+      } else if (e.response?.statusCode == 422) {
+        throw ApiException(errorMessage ?? 'Error de validación');
+      } else if (e.response?.statusCode == 500) {
+        throw ApiException(errorMessage ?? 'Error al cambiar la contraseña');
+      }
+      throw ApiException(errorMessage ?? 'Error de conexión. Verifica tu internet.');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error inesperado: ${e.toString()}');
+    }
+  }
 }
 

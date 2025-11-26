@@ -87,5 +87,7 @@ class AppIcons {
   static final IconData type = MdiIcons.accountCircle;
   static final IconData status = MdiIcons.flag;
   static final IconData origin = MdiIcons.sourceBranch;
+  static final IconData lock = MdiIcons.lock;
+  static final IconData key = MdiIcons.key;
 }
 

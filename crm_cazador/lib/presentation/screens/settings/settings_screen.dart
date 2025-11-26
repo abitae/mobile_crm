@@ -30,6 +30,15 @@ class SettingsScreen extends ConsumerWidget {
               context.push('/settings/api');
             },
           ),
+          ListTile(
+            leading: Icon(AppIcons.lock),
+            title: const Text('Cambiar Contraseña'),
+            subtitle: const Text('Actualizar tu contraseña de acceso'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              context.push('/settings/change-password');
+            },
+          ),
           const Divider(),
           ListTile(
             leading: Icon(AppIcons.logout),

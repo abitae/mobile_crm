@@ -3,7 +3,30 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Servicio para almacenamiento seguro y persistente
 class StorageService {
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  // Configuración específica de plataforma para flutter_secure_storage
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    // Configuración para Android
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    // Configuración para iOS
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+    // Configuración para Web (usa localStorage en lugar de secure storage)
+    webOptions: WebOptions(
+      // En Web, flutter_secure_storage usa localStorage con encriptación
+      // No requiere configuración adicional
+    ),
+    // Configuración para Linux
+    lOptions: LinuxOptions(),
+    // Configuración para Windows
+    wOptions: WindowsOptions(),
+    // Configuración para macOS
+    mOptions: MacOsOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
   static SharedPreferences? _prefs;
 
   /// Inicializar el servicio

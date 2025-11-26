@@ -1,11 +1,11 @@
 {
-    "name": "crm_datero",
-    "short_name": "crm_datero",
+    "name": "LER Datero",
+    "short_name": "LER Datero",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Aplicación móvil Flutter para sistema CRM inmobiliario - LER Datero",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
