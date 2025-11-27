@@ -144,20 +144,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _emailController,
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
+                    enabled: !_isLoading,
                     decoration: InputDecoration(
                       labelText: 'Usuario',
                       hintText: 'usuario',
                       helperText: 'Se agregará automáticamente @lotesenremate.pe',
                       prefixIcon: const Icon(Icons.person),
-                      suffixIcon: Container(
-                        padding: const EdgeInsets.only(right: 12),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '@lotesenremate.pe',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                      suffixText: '@lotesenremate.pe',
+                      suffixStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     validator: (value) {
