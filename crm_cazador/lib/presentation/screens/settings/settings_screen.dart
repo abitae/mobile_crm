@@ -40,6 +40,9 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const Divider(),
+          // Información de desarrollador y contacto
+          _buildDeveloperSection(context),
+          const Divider(),
           ListTile(
             leading: Icon(AppIcons.logout),
             title: const Text('Cerrar Sesión'),
@@ -109,6 +112,107 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeveloperSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Información de Desarrollo',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.code,
+                        color: colorScheme.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Desarrollado por',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Abel Arana Cortez',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'open9.cloud',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone,
+                        color: colorScheme.primary,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Contacto',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '947199138',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

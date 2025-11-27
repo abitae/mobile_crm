@@ -376,6 +376,8 @@ class ReservationUnit {
   final String unitNumber;
   final String? fullIdentifier;
   final double? area;
+  final double? basePrice;
+  final double? totalPrice;
   final double? finalPrice;
 
   ReservationUnit({
@@ -384,6 +386,8 @@ class ReservationUnit {
     required this.unitNumber,
     this.fullIdentifier,
     this.area,
+    this.basePrice,
+    this.totalPrice,
     this.finalPrice,
   });
 
@@ -394,6 +398,12 @@ class ReservationUnit {
       unitNumber: json['unit_number'] as String? ?? '',
       fullIdentifier: json['full_identifier'] as String?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
+      basePrice: json['base_price'] != null
+          ? (json['base_price'] as num).toDouble()
+          : null,
+      totalPrice: json['total_price'] != null
+          ? (json['total_price'] as num).toDouble()
+          : null,
       finalPrice: json['final_price'] != null
           ? (json['final_price'] as num).toDouble()
           : null,
@@ -407,6 +417,8 @@ class ReservationUnit {
       'unit_number': unitNumber,
       'full_identifier': fullIdentifier,
       'area': area,
+      'base_price': basePrice,
+      'total_price': totalPrice,
       'final_price': finalPrice,
     };
   }

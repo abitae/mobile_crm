@@ -171,6 +171,16 @@ class ReservationDetailScreen extends ConsumerWidget {
                         'Área',
                         '${reservation.unit!.area!.toStringAsFixed(0)} m²',
                       ),
+                    if (reservation.unit!.basePrice != null)
+                      _buildInfoRow(
+                        'Precio Base',
+                        currencyFormat.format(reservation.unit!.basePrice!),
+                      ),
+                    if (reservation.unit!.totalPrice != null)
+                      _buildInfoRow(
+                        'Precio Total',
+                        currencyFormat.format(reservation.unit!.totalPrice!),
+                      ),
                     if (reservation.unit!.finalPrice != null)
                       _buildInfoRow(
                         'Precio Final',

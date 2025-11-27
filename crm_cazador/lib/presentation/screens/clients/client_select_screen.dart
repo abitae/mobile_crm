@@ -23,9 +23,9 @@ class _ClientSelectScreenState extends ConsumerState<ClientSelectScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Cargar clientes al iniciar
+    // Cargar clientes al iniciar con refresh para evitar duplicados
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(clientsNotifierProvider).loadClients();
+      ref.read(clientsNotifierProvider).loadClients(refresh: true);
     });
   }
 
@@ -128,6 +128,7 @@ class _ClientSelectScreenState extends ConsumerState<ClientSelectScreen> {
     return ListView.builder(
       controller: _scrollController,
       itemCount: clientsState.clients.length + (clientsState.isLoadingMore ? 1 : 0),
+      cacheExtent: 500, // Optimizar caché de scroll
       itemBuilder: (context, index) {
         if (index >= clientsState.clients.length) {
           return const Padding(
@@ -138,6 +139,7 @@ class _ClientSelectScreenState extends ConsumerState<ClientSelectScreen> {
 
         final client = clientsState.clients[index];
         return ClientCard(
+          key: ValueKey('client_select_${client.id}'), // Key única para evitar duplicados
           client: client,
           onTap: () {
             // Retornar el cliente seleccionado

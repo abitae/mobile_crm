@@ -94,8 +94,18 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         source: state.sourceFilter,
       );
 
+      // Prevenir duplicados: si no es refresh, filtrar clientes que ya existen
+      List<ClientModel> newClients;
+      if (refresh) {
+        newClients = response.data;
+      } else {
+        final existingIds = state.clients.map((c) => c.id).toSet();
+        newClients = response.data.where((c) => !existingIds.contains(c.id)).toList();
+        newClients = [...state.clients, ...newClients];
+      }
+
       state = state.copyWith(
-        clients: refresh ? response.data : [...state.clients, ...response.data],
+        clients: newClients,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
         hasMore: response.currentPage < response.totalPages,
@@ -131,8 +141,12 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         source: state.sourceFilter,
       );
 
+      // Prevenir duplicados: filtrar clientes que ya existen
+      final existingIds = state.clients.map((c) => c.id).toSet();
+      final newClients = response.data.where((c) => !existingIds.contains(c.id)).toList();
+
       state = state.copyWith(
-        clients: [...state.clients, ...response.data],
+        clients: [...state.clients, ...newClients],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
         hasMore: response.currentPage < response.totalPages,

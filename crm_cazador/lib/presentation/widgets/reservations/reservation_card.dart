@@ -114,6 +114,58 @@ class ReservationCard extends StatelessWidget {
                     ],
                   ),
                 ],
+                // Precios de la unidad
+                if (reservation.unit!.basePrice != null || 
+                    reservation.unit!.totalPrice != null || 
+                    reservation.unit!.finalPrice != null) ...[
+                  const SizedBox(height: 8),
+                  if (reservation.unit!.basePrice != null)
+                    Row(
+                      children: [
+                        Icon(Icons.price_check_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Precio Base: ${currencyFormat.format(reservation.unit!.basePrice!)}',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (reservation.unit!.totalPrice != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calculate_outlined, size: 14, color: colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Precio Total: ${currencyFormat.format(reservation.unit!.totalPrice!)}',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (reservation.unit!.finalPrice != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.attach_money, size: 14, color: Colors.green[700]!),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Precio Final: ${currencyFormat.format(reservation.unit!.finalPrice!)}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ],
               const SizedBox(height: 12),
               

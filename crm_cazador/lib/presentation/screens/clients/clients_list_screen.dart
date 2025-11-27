@@ -260,6 +260,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     return ListView.builder(
       controller: _scrollController,
       itemCount: state.clients.length + (state.isLoadingMore ? 1 : 0),
+      cacheExtent: 500, // Optimizar caché de scroll
       itemBuilder: (context, index) {
         if (index >= state.clients.length) {
           return const Padding(
@@ -270,6 +271,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
         final client = state.clients[index];
         return ClientCard(
+          key: ValueKey('client_${client.id}'), // Key única para evitar duplicados en renderizado
           client: client,
           onTap: () {
             context.push('/clients/${client.id}');

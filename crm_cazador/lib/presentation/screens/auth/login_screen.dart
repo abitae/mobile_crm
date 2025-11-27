@@ -53,8 +53,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isLoading = true;
     });
 
+    // Construir el email completo con el dominio
+    final username = _emailController.text.trim();
+    final email = '$username@lotesenremate.pe';
+
     final success = await ref.read(authNotifierProvider).login(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
           rememberMe: _rememberMe,
         );
@@ -138,22 +142,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 48),
                   TextFormField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'tu@email.com',
-                      prefixIcon: Icon(Icons.email),
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Usuario',
+                      hintText: 'usuario',
+                      helperText: 'Se agregará automáticamente @lotesenremate.pe',
+                      prefixIcon: const Icon(Icons.person),
+                      suffixIcon: Container(
+                        padding: const EdgeInsets.only(right: 12),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '@lotesenremate.pe',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu email';
+                        return 'Por favor ingresa tu usuario';
                       }
-                      // Validación de email más robusta
-                      final emailRegex = RegExp(
-                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                      );
-                      if (!emailRegex.hasMatch(value.trim())) {
-                        return 'Email inválido';
+                      // Validar que no contenga @ ni espacios
+                      if (value.contains('@') || value.contains(' ')) {
+                        return 'Solo ingresa tu nombre de usuario (sin @ ni espacios)';
+                      }
+                      // Validar caracteres permitidos
+                      final userRegex = RegExp(r'^[a-zA-Z0-9._-]+$');
+                      if (!userRegex.hasMatch(value.trim())) {
+                        return 'Usuario inválido. Solo letras, números, puntos, guiones y guiones bajos';
                       }
                       return null;
                     },
