@@ -23,6 +23,10 @@ class _ProjectSelectScreenState extends ConsumerState<ProjectSelectScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Cargar proyectos al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(projectsNotifierProvider).loadProjects();
+    });
   }
 
   @override
@@ -99,7 +103,7 @@ class _ProjectSelectScreenState extends ConsumerState<ProjectSelectScreen> {
     );
   }
 
-  Widget _buildBody(projectsState) {
+  Widget _buildBody(ProjectsState projectsState) {
     if (projectsState.isLoading && projectsState.projects.isEmpty) {
       return const LoadingIndicator();
     }

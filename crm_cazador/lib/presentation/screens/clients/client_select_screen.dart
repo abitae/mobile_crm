@@ -23,6 +23,10 @@ class _ClientSelectScreenState extends ConsumerState<ClientSelectScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Cargar clientes al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(clientsNotifierProvider).loadClients();
+    });
   }
 
   @override
@@ -99,7 +103,7 @@ class _ClientSelectScreenState extends ConsumerState<ClientSelectScreen> {
     );
   }
 
-  Widget _buildBody(clientsState) {
+  Widget _buildBody(ClientsState clientsState) {
     if (clientsState.isLoading && clientsState.clients.isEmpty) {
       return const LoadingIndicator();
     }

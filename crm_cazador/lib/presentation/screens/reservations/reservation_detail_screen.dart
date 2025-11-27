@@ -22,7 +22,6 @@ class ReservationDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reservationAsync = ref.watch(reservationProvider(reservationId));
-    final reservationsNotifier = ref.read(reservationsNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -153,10 +152,20 @@ class ReservationDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (reservation.unit!.unitManzana != null)
+                      _buildInfoRow(
+                        'Manzana',
+                        reservation.unit!.unitManzana!,
+                      ),
                     _buildInfoRow(
-                      'Identificador',
-                      _getUnitIdentifier(reservation.unit!),
+                      'Número',
+                      reservation.unit!.unitNumber,
                     ),
+                    if (reservation.unit!.fullIdentifier != null)
+                      _buildInfoRow(
+                        'Identificador Completo',
+                        reservation.unit!.fullIdentifier!,
+                      ),
                     if (reservation.unit!.area != null)
                       _buildInfoRow(
                         'Área',
@@ -200,11 +209,6 @@ class ReservationDetailScreen extends ConsumerWidget {
                     'Monto de Reserva',
                     currencyFormat.format(reservation.reservationAmount),
                   ),
-                  if (reservation.reservationPercentage != null)
-                    _buildInfoRow(
-                      'Porcentaje',
-                      '${reservation.reservationPercentage!.toStringAsFixed(1)}%',
-                    ),
                   if (reservation.paymentMethod != null)
                     _buildInfoRow('Método de Pago', reservation.paymentMethod!),
                   if (reservation.paymentReference != null)
@@ -400,16 +404,6 @@ class ReservationDetailScreen extends ConsumerWidget {
       default:
         return (colorScheme.onSurfaceVariant, paymentStatus);
     }
-  }
-
-  String _getUnitIdentifier(unit) {
-    if (unit.fullIdentifier != null) {
-      return unit.fullIdentifier!;
-    }
-    if (unit.unitManzana != null) {
-      return 'Mz. ${unit.unitManzana} • ${unit.unitNumber}';
-    }
-    return unit.unitNumber;
   }
 
   Widget _buildActions(BuildContext context, WidgetRef ref, reservation) {

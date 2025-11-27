@@ -97,6 +97,23 @@ class ReservationCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (reservation.unit!.unitManzana != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 16, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Manzana: ${reservation.unit!.unitManzana}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
               const SizedBox(height: 12),
               
@@ -123,26 +140,11 @@ class ReservationCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoItem(
-                      context,
-                      Icons.attach_money,
-                      'Monto',
-                      currencyFormat.format(reservation.reservationAmount),
-                    ),
-                  ),
-                  if (reservation.reservationPercentage != null)
-                    Expanded(
-                      child: _buildInfoItem(
-                        context,
-                        Icons.percent,
-                        'Porcentaje',
-                        '${reservation.reservationPercentage!.toStringAsFixed(1)}%',
-                      ),
-                    ),
-                ],
+              _buildInfoItem(
+                context,
+                Icons.attach_money,
+                'Monto',
+                currencyFormat.format(reservation.reservationAmount),
               ),
               
               // Indicador de expiración próxima

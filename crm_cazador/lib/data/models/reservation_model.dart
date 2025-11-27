@@ -87,20 +87,58 @@ class ReservationModel {
   });
 
   factory ReservationModel.fromJson(Map<String, dynamic> json) {
+    // Función auxiliar para parsear fechas de forma segura
+    // Según la documentación:
+    // - reservation_date y expiration_date: formato "YYYY-MM-DD" (ej: "2024-01-15")
+    // - created_at y updated_at: formato "YYYY-MM-DD HH:MM:SS" (ej: "2024-01-15 10:00:00")
+    DateTime? _parseDate(dynamic dateValue) {
+      if (dateValue == null) return null;
+      if (dateValue is DateTime) return dateValue;
+      try {
+        final dateStr = dateValue.toString().trim();
+        if (dateStr.isEmpty) return null;
+        
+        // Intentar parsear directamente (DateTime.parse maneja ambos formatos)
+        try {
+          return DateTime.parse(dateStr);
+        } catch (_) {
+          // Si falla, intentar extraer solo la parte de fecha (YYYY-MM-DD)
+          if (dateStr.length >= 10) {
+            final dateOnly = dateStr.substring(0, 10);
+            return DateTime.parse(dateOnly);
+          }
+          return null;
+        }
+      } catch (e) {
+        print('⚠️ [ReservationModel] Error al parsear fecha: $dateValue - $e');
+        return null;
+      }
+    }
+
+    // Función auxiliar para parsear objetos anidados de forma segura
+    T? _parseNested<T>(dynamic value, T Function(Map<String, dynamic>) fromJson) {
+      if (value == null) return null;
+      if (value is! Map<String, dynamic>) return null;
+      try {
+        return fromJson(value);
+      } catch (e) {
+        print('⚠️ [ReservationModel] Error al parsear objeto anidado: $e');
+        return null;
+      }
+    }
+
     return ReservationModel(
-      id: json['id'] as int,
-      reservationNumber: json['reservation_number'] as String,
-      clientId: json['client_id'] as int,
-      projectId: json['project_id'] as int,
-      unitId: json['unit_id'] as int,
-      advisorId: json['advisor_id'] as int,
+      id: json['id'] as int? ?? 0,
+      reservationNumber: json['reservation_number'] as String? ?? '',
+      clientId: json['client_id'] as int? ?? 0,
+      projectId: json['project_id'] as int? ?? 0,
+      unitId: json['unit_id'] as int? ?? 0,
+      advisorId: json['advisor_id'] as int? ?? 0,
       reservationType: json['reservation_type'] as String? ?? 'pre_reserva',
-      status: json['status'] as String,
-      reservationDate: DateTime.parse(json['reservation_date'] as String),
-      expirationDate: json['expiration_date'] != null
-          ? DateTime.parse(json['expiration_date'] as String)
-          : null,
-      reservationAmount: (json['reservation_amount'] as num).toDouble(),
+      status: json['status'] as String? ?? 'activa',
+      reservationDate: _parseDate(json['reservation_date']) ?? DateTime.now(),
+      expirationDate: _parseDate(json['expiration_date']),
+      reservationAmount: (json['reservation_amount'] as num?)?.toDouble() ?? 0.0,
       reservationPercentage: json['reservation_percentage'] != null
           ? (json['reservation_percentage'] as num).toDouble()
           : null,
@@ -127,24 +165,12 @@ class ReservationModel {
       canBeConfirmed: json['can_be_confirmed'] as bool? ?? false,
       canBeCancelled: json['can_be_cancelled'] as bool? ?? false,
       canBeConverted: json['can_be_converted'] as bool? ?? false,
-      client: json['client'] != null
-          ? ReservationClient.fromJson(json['client'] as Map<String, dynamic>)
-          : null,
-      project: json['project'] != null
-          ? ReservationProject.fromJson(json['project'] as Map<String, dynamic>)
-          : null,
-      unit: json['unit'] != null
-          ? ReservationUnit.fromJson(json['unit'] as Map<String, dynamic>)
-          : null,
-      advisor: json['advisor'] != null
-          ? ReservationAdvisor.fromJson(json['advisor'] as Map<String, dynamic>)
-          : null,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
+      client: _parseNested(json['client'], ReservationClient.fromJson),
+      project: _parseNested(json['project'], ReservationProject.fromJson),
+      unit: _parseNested(json['unit'], ReservationUnit.fromJson),
+      advisor: _parseNested(json['advisor'], ReservationAdvisor.fromJson),
+      createdAt: _parseDate(json['created_at']),
+      updatedAt: _parseDate(json['updated_at']),
     );
   }
 
@@ -287,8 +313,8 @@ class ReservationClient {
 
   factory ReservationClient.fromJson(Map<String, dynamic> json) {
     return ReservationClient(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: json['id'] as int? ?? 0,
+      name: json['name'] as String? ?? '',
       phone: json['phone'] as String?,
       documentType: json['document_type'] as String?,
       documentNumber: json['document_number'] as String?,
@@ -324,8 +350,8 @@ class ReservationProject {
 
   factory ReservationProject.fromJson(Map<String, dynamic> json) {
     return ReservationProject(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: json['id'] as int? ?? 0,
+      name: json['name'] as String? ?? '',
       address: json['address'] as String?,
       district: json['district'] as String?,
       province: json['province'] as String?,
@@ -363,9 +389,9 @@ class ReservationUnit {
 
   factory ReservationUnit.fromJson(Map<String, dynamic> json) {
     return ReservationUnit(
-      id: json['id'] as int,
+      id: json['id'] as int? ?? 0,
       unitManzana: json['unit_manzana'] as String?,
-      unitNumber: json['unit_number'] as String,
+      unitNumber: json['unit_number'] as String? ?? '',
       fullIdentifier: json['full_identifier'] as String?,
       area: json['area'] != null ? (json['area'] as num).toDouble() : null,
       finalPrice: json['final_price'] != null
@@ -400,8 +426,8 @@ class ReservationAdvisor {
 
   factory ReservationAdvisor.fromJson(Map<String, dynamic> json) {
     return ReservationAdvisor(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: json['id'] as int? ?? 0,
+      name: json['name'] as String? ?? '',
       email: json['email'] as String?,
     );
   }

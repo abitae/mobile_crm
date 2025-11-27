@@ -8,15 +8,12 @@ import '../../core/exceptions/api_exception.dart';
 /// Servicio para gestión de reservas (Cazador)
 class ReservationService {
   /// Obtener lista de reservas paginada
+  /// Nota: Según la documentación, este endpoint solo acepta `page` y `per_page`.
+  /// El filtrado por `advisor_id` es automático en el backend según el usuario autenticado.
+  /// No hay filtros adicionales disponibles (search, status, payment_status, etc.)
   static Future<PaginatedResponse<ReservationModel>> getReservations({
     int page = 1,
     int perPage = 15,
-    String? search,
-    String? status,
-    String? paymentStatus,
-    int? projectId,
-    int? clientId,
-    int? advisorId,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -24,49 +21,84 @@ class ReservationService {
         'per_page': perPage.clamp(1, 100),
       };
 
-      if (search != null && search.isNotEmpty) {
-        queryParams['search'] = search;
-      }
-      if (status != null && status.isNotEmpty) {
-        queryParams['status'] = status;
-      }
-      if (paymentStatus != null && paymentStatus.isNotEmpty) {
-        queryParams['payment_status'] = paymentStatus;
-      }
-      if (projectId != null) {
-        queryParams['project_id'] = projectId;
-      }
-      if (clientId != null) {
-        queryParams['client_id'] = clientId;
-      }
-      if (advisorId != null) {
-        queryParams['advisor_id'] = advisorId;
-      }
-
+      print('📤 [ReservationService] Solicitando reservas: page=$page, perPage=$perPage');
+      
       final response = await ApiService.get(
         '/cazador/reservations',
         queryParameters: queryParams,
       );
 
-      final responseData = response.data as Map<String, dynamic>;
+      // Log para debugging
+      print('📥 [ReservationService] Respuesta recibida: ${response.statusCode}');
+      print('📥 [ReservationService] Headers: ${response.headers}');
+      
+      // Verificar que la respuesta tenga datos
+      if (response.data == null) {
+        print('❌ [ReservationService] Respuesta sin datos');
+        throw ApiException('Respuesta vacía del servidor');
+      }
+      
+      print('📥 [ReservationService] Tipo de respuesta: ${response.data.runtimeType}');
+      
+      final responseData = response.data as Map<String, dynamic>?;
+      
+      if (responseData == null) {
+        print('❌ [ReservationService] Respuesta no es un Map: ${response.data}');
+        throw ApiException('Respuesta inválida: formato de datos incorrecto');
+      }
+      
+      print('📥 [ReservationService] Respuesta data keys: ${responseData.keys}');
+      
+      // Verificar estructura de respuesta
+      if (responseData['success'] == false) {
+        final errorMsg = responseData['message'] as String? ?? 'Error desconocido';
+        print('❌ [ReservationService] API retornó success=false: $errorMsg');
+        throw ApiException(errorMsg);
+      }
+      
       final dataObj = responseData['data'] as Map<String, dynamic>?;
 
       if (dataObj == null) {
+        print('❌ [ReservationService] Respuesta sin objeto data');
+        print('❌ [ReservationService] Respuesta completa: $responseData');
         throw ApiException('Respuesta inválida: no se encontró el objeto data');
       }
+      
+      print('📥 [ReservationService] Data object keys: ${dataObj.keys}');
 
       final reservations = dataObj['reservations'] as List<dynamic>?;
 
       if (reservations == null) {
+        print('❌ [ReservationService] No se encontró array reservations en data');
+        print('❌ [ReservationService] Data object: $dataObj');
         throw ApiException('Respuesta inválida: no se encontró el array reservations');
       }
+      
+      print('📋 [ReservationService] Reservas encontradas: ${reservations.length}');
 
       final pagination = dataObj['pagination'] as Map<String, dynamic>? ?? {};
 
-      final parsedReservations = reservations
-          .whereType<Map<String, dynamic>>()
-          .map((item) => ReservationModel.fromJson(item))
-          .toList();
+      // Parsear reservas con manejo de errores individual
+      final parsedReservations = <ReservationModel>[];
+      print('📋 [ReservationService] Parseando ${reservations.length} reservas...');
+      
+      for (var item in reservations) {
+        if (item is! Map<String, dynamic>) {
+          print('⚠️ [ReservationService] Item no es Map: $item');
+          continue;
+        }
+        try {
+          parsedReservations.add(ReservationModel.fromJson(item));
+        } catch (e, stackTrace) {
+          // Log error pero continuar con las demás reservas
+          print('⚠️ [ReservationService] Error al parsear reserva: $e');
+          print('⚠️ [ReservationService] StackTrace: $stackTrace');
+          print('⚠️ [ReservationService] Datos: $item');
+          // Continuar con la siguiente reserva
+        }
+      }
+      
+      print('✅ [ReservationService] ${parsedReservations.length} reservas parseadas exitosamente');
 
       return PaginatedResponse<ReservationModel>(
         data: parsedReservations,
@@ -76,21 +108,41 @@ class ReservationService {
         perPage: pagination['per_page'] as int? ?? 15,
       );
     } on DioException catch (e) {
+      print('❌ [ReservationService] DioException capturada');
+      print('❌ [ReservationService] Tipo: ${e.type}');
+      print('❌ [ReservationService] Mensaje: ${e.message}');
+      print('❌ [ReservationService] Status Code: ${e.response?.statusCode}');
+      print('❌ [ReservationService] Response Data: ${e.response?.data}');
+      
       final responseData = e.response?.data;
       String? errorMessage;
       if (responseData is Map<String, dynamic>) {
         errorMessage = responseData['message'] as String?;
+        print('❌ [ReservationService] Mensaje del servidor: $errorMessage');
       }
 
       if (e.response?.statusCode == 401) {
         throw ApiException(errorMessage ?? 'Usuario no autenticado');
+      } else if (e.response?.statusCode == 403) {
+        throw ApiException(errorMessage ?? 'No tienes permiso para acceder a las reservas');
+      } else if (e.response?.statusCode == 404) {
+        throw ApiException(errorMessage ?? 'Endpoint no encontrado');
       } else if (e.response?.statusCode == 429) {
         throw ApiException(errorMessage ?? 'Too Many Requests');
+      } else if (e.response?.statusCode == 500) {
+        throw ApiException(errorMessage ?? 'Error interno del servidor');
+      } else if (e.type == DioExceptionType.connectionTimeout || 
+                 e.type == DioExceptionType.receiveTimeout) {
+        throw ApiException('Tiempo de espera agotado. Verifica tu conexión a internet.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw ApiException('Error de conexión. Verifica tu conexión a internet.');
       }
       throw ApiException(
-          errorMessage ?? 'Error al obtener reservas: ${e.message}');
-    } catch (e) {
+          errorMessage ?? 'Error al obtener reservas: ${e.message ?? e.type.toString()}');
+    } catch (e, stackTrace) {
       if (e is ApiException) rethrow;
+      print('❌ [ReservationService] Error inesperado: $e');
+      print('❌ [ReservationService] StackTrace: $stackTrace');
       throw ApiException('Error inesperado: ${e.toString()}');
     }
   }

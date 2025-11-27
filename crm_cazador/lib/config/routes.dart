@@ -65,13 +65,11 @@ final routesProvider = Provider<GoRouter>((ref) {
         name: 'projects',
         builder: (context, state) => const ProjectsListScreen(),
       ),
+      // Rutas estáticas deben ir ANTES de las rutas con parámetros
       GoRoute(
-        path: '/projects/:id',
-        name: 'project-detail',
-        builder: (context, state) {
-          final id = int.parse(state.pathParameters['id']!);
-          return ProjectDetailScreen(projectId: id);
-        },
+        path: '/projects/select',
+        name: 'project-select',
+        builder: (context, state) => const ProjectSelectScreen(),
       ),
       GoRoute(
         path: '/projects/:id/units',
@@ -82,19 +80,28 @@ final routesProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/projects/select',
-        name: 'project-select',
-        builder: (context, state) => const ProjectSelectScreen(),
+        path: '/projects/:id',
+        name: 'project-detail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ProjectDetailScreen(projectId: id);
+        },
       ),
       GoRoute(
         path: '/clients',
         name: 'clients',
         builder: (context, state) => const ClientsListScreen(),
       ),
+      // Rutas estáticas deben ir ANTES de las rutas con parámetros
       GoRoute(
         path: '/clients/new',
         name: 'client-new',
         builder: (context, state) => const ClientFormScreen(),
+      ),
+      GoRoute(
+        path: '/clients/select',
+        name: 'client-select',
+        builder: (context, state) => const ClientSelectScreen(),
       ),
       GoRoute(
         path: '/clients/:id/edit',
@@ -111,11 +118,6 @@ final routesProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return ClientDetailScreen(clientId: id);
         },
-      ),
-      GoRoute(
-        path: '/clients/select',
-        name: 'client-select',
-        builder: (context, state) => const ClientSelectScreen(),
       ),
       GoRoute(
         path: '/reservations',

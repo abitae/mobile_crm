@@ -77,47 +77,116 @@ class ReservationsState {
 /// Provider de reservas
 class ReservationsNotifier extends StateNotifier<ReservationsState> {
   ReservationsNotifier() : super(ReservationsState()) {
-    Future.microtask(() => loadReservations());
+    // Cargar reservas al inicializar (similar a clients y projects)
+    loadReservations();
   }
 
   /// Getter público para acceder al estado
   ReservationsState get currentState => state;
 
+  /// Lista completa de reservas (sin filtros aplicados)
+  List<ReservationModel> _allReservations = [];
+
+  /// Aplicar filtros locales a las reservas
+  List<ReservationModel> _applyFilters(List<ReservationModel> reservations) {
+    var filtered = reservations;
+
+    // Filtro por estado
+    if (state.statusFilter != null && state.statusFilter!.isNotEmpty) {
+      filtered = filtered
+          .where((r) => r.status == state.statusFilter)
+          .toList();
+    }
+
+    // Filtro por estado de pago
+    if (state.paymentStatusFilter != null &&
+        state.paymentStatusFilter!.isNotEmpty) {
+      filtered = filtered
+          .where((r) => r.paymentStatus == state.paymentStatusFilter)
+          .toList();
+    }
+
+    // Filtro por proyecto
+    if (state.projectIdFilter != null) {
+      filtered = filtered
+          .where((r) => r.projectId == state.projectIdFilter)
+          .toList();
+    }
+
+    // Filtro por cliente
+    if (state.clientIdFilter != null) {
+      filtered = filtered
+          .where((r) => r.clientId == state.clientIdFilter)
+          .toList();
+    }
+
+    // Filtro por búsqueda (número de reserva, nombre de cliente o proyecto)
+    if (state.search != null && state.search!.isNotEmpty) {
+      final searchLower = state.search!.toLowerCase();
+      filtered = filtered.where((r) {
+        final reservationNumber = r.reservationNumber.toLowerCase();
+        final clientName = r.client?.name.toLowerCase() ?? '';
+        final projectName = r.project?.name.toLowerCase() ?? '';
+        return reservationNumber.contains(searchLower) ||
+            clientName.contains(searchLower) ||
+            projectName.contains(searchLower);
+      }).toList();
+    }
+
+    return filtered;
+  }
+
   /// Cargar reservas
+  /// Nota: Según la documentación, el API solo acepta `page` y `per_page`.
+  /// Los filtros se aplican localmente después de cargar los datos.
   Future<void> loadReservations({bool refresh = false}) async {
     if (refresh) {
       state = state.copyWith(isLoading: true, error: null, currentPage: 1);
+      _allReservations = [];
     } else {
       state = state.copyWith(isLoading: true, error: null);
     }
 
     try {
+      print('🔄 [ReservationsNotifier] Cargando reservas (refresh: $refresh, page: ${refresh ? 1 : state.currentPage})');
+      
       final response = await ReservationService.getReservations(
         page: refresh ? 1 : state.currentPage,
         perPage: 15,
-        search: state.search,
-        status: state.statusFilter,
-        paymentStatus: state.paymentStatusFilter,
-        projectId: state.projectIdFilter,
-        clientId: state.clientIdFilter,
-        advisorId: state.advisorIdFilter,
       );
 
+      print('✅ [ReservationsNotifier] Reservas cargadas: ${response.data.length}');
+      print('📄 [ReservationsNotifier] Página actual: ${response.currentPage}, Total páginas: ${response.totalPages}');
+
+      // Actualizar lista completa de reservas
+      if (refresh) {
+        _allReservations = response.data;
+      } else {
+        _allReservations = [..._allReservations, ...response.data];
+      }
+
+      // Aplicar filtros locales
+      final filteredReservations = _applyFilters(_allReservations);
+
       state = state.copyWith(
-        reservations:
-            refresh ? response.data : [...state.reservations, ...response.data],
+        reservations: filteredReservations,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
         hasMore: response.currentPage < response.totalPages,
         isLoading: false,
         error: null,
       );
+      
+      print('✅ [ReservationsNotifier] Estado actualizado. Total reservas: ${_allReservations.length}, Filtradas: ${filteredReservations.length}');
     } on ApiException catch (e) {
+      print('❌ [ReservationsNotifier] ApiException: ${e.message}');
       state = state.copyWith(
         isLoading: false,
         error: e.message,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [ReservationsNotifier] Error inesperado: $e');
+      print('❌ [ReservationsNotifier] StackTrace: $stackTrace');
       state = state.copyWith(
         isLoading: false,
         error: 'Error inesperado: ${e.toString()}',
@@ -135,16 +204,16 @@ class ReservationsNotifier extends StateNotifier<ReservationsState> {
       final response = await ReservationService.getReservations(
         page: nextPage,
         perPage: 15,
-        search: state.search,
-        status: state.statusFilter,
-        paymentStatus: state.paymentStatusFilter,
-        projectId: state.projectIdFilter,
-        clientId: state.clientIdFilter,
-        advisorId: state.advisorIdFilter,
       );
 
+      // Agregar a la lista completa
+      _allReservations = [..._allReservations, ...response.data];
+
+      // Aplicar filtros locales
+      final filteredReservations = _applyFilters(_allReservations);
+
       state = state.copyWith(
-        reservations: [...state.reservations, ...response.data],
+        reservations: filteredReservations,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
         hasMore: response.currentPage < response.totalPages,
@@ -163,13 +232,15 @@ class ReservationsNotifier extends StateNotifier<ReservationsState> {
     }
   }
 
-  /// Aplicar búsqueda
+  /// Aplicar búsqueda (filtrado local)
   void setSearch(String? search) {
-    state = state.copyWith(search: search, currentPage: 1);
-    loadReservations(refresh: true);
+    state = state.copyWith(search: search);
+    // Aplicar filtros localmente sin recargar del API
+    final filteredReservations = _applyFilters(_allReservations);
+    state = state.copyWith(reservations: filteredReservations);
   }
 
-  /// Aplicar filtros
+  /// Aplicar filtros (filtrado local)
   void setFilters({
     String? status,
     String? paymentStatus,
@@ -183,12 +254,13 @@ class ReservationsNotifier extends StateNotifier<ReservationsState> {
       projectIdFilter: projectId,
       clientIdFilter: clientId,
       advisorIdFilter: advisorId,
-      currentPage: 1,
     );
-    loadReservations(refresh: true);
+    // Aplicar filtros localmente sin recargar del API
+    final filteredReservations = _applyFilters(_allReservations);
+    state = state.copyWith(reservations: filteredReservations);
   }
 
-  /// Limpiar filtros
+  /// Limpiar filtros (filtrado local)
   void clearFilters() {
     state = state.copyWith(
       search: null,
@@ -197,9 +269,9 @@ class ReservationsNotifier extends StateNotifier<ReservationsState> {
       projectIdFilter: null,
       clientIdFilter: null,
       advisorIdFilter: null,
-      currentPage: 1,
     );
-    loadReservations(refresh: true);
+    // Mostrar todas las reservas sin filtros
+    state = state.copyWith(reservations: _allReservations);
   }
 
   /// Limpiar error
@@ -223,11 +295,13 @@ final reservationsNotifierProvider =
 
 /// Provider global de reservas (estado) - reactivo
 /// Observa el notifier y accede al estado actual
+/// Nota: Para que sea completamente reactivo, los widgets deben observar
+/// directamente reservationsNotifierProvider y acceder a currentState
 final reservationsProvider = Provider<ReservationsState>((ref) {
   // Observar el notifier para que el provider se actualice cuando cambie
-  ref.watch(reservationsNotifierProvider);
-  // Retornar el estado actual
-  return ref.read(reservationsNotifierProvider).currentState;
+  final notifier = ref.watch(reservationsNotifierProvider);
+  // Retornar el estado actual del notifier
+  return notifier.currentState;
 });
 
 /// Provider para una reserva específica
