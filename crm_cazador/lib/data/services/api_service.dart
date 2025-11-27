@@ -24,6 +24,12 @@ class ApiService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      // Optimizaciones de rendimiento
+      followRedirects: true,
+      maxRedirects: 5,
+      validateStatus: (status) => status != null && status < 500, // Aceptar códigos < 500
+      // Comprimir respuestas si el servidor lo soporta
+      listFormat: ListFormat.multiCompatible,
     ));
 
     // Interceptor para agregar token automáticamente
@@ -74,12 +80,22 @@ class ApiService {
       },
     ));
 
-    // Interceptor para logging en desarrollo
-    _dio!.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      error: true,
-    ));
+    // Interceptor para logging solo en modo debug
+    if (const bool.fromEnvironment('dart.vm.product') == false) {
+      _dio!.interceptors.add(LogInterceptor(
+        requestBody: false, // Desactivar en producción para mejor rendimiento
+        responseBody: false, // Desactivar en producción para mejor rendimiento
+        error: true,
+        requestHeader: false,
+        responseHeader: false,
+        logPrint: (obj) {
+          // Solo loggear errores en producción
+          if (obj.toString().contains('ERROR') || obj.toString().contains('Exception')) {
+            print(obj);
+          }
+        },
+      ));
+    }
 
     _initialized = true;
   }

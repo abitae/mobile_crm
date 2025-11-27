@@ -84,6 +84,19 @@ class PaginatedResponse<T> {
       );
     }
     
+    if (dataObj is Map<String, dynamic> && dataObj.containsKey('reservations')) {
+      final reservations = dataObj['reservations'] as List<dynamic>? ?? [];
+      final pagination = dataObj['pagination'] as Map<String, dynamic>? ?? {};
+      
+      return PaginatedResponse<T>(
+        data: reservations.map((item) => fromJsonT(item)).toList(),
+        currentPage: pagination['current_page'] as int? ?? 1,
+        totalPages: pagination['last_page'] as int? ?? 1,
+        totalItems: pagination['total'] as int? ?? 0,
+        perPage: pagination['per_page'] as int? ?? 15,
+      );
+    }
+    
     return PaginatedResponse<T>(
       data: (json['data'] as List<dynamic>?)
               ?.map((item) => fromJsonT(item))

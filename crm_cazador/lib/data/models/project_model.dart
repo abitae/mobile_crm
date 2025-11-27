@@ -1,3 +1,5 @@
+import 'unit_model.dart';
+
 /// Modelo de proyecto inmobiliario
 class ProjectModel {
   final int id;
@@ -38,6 +40,8 @@ class ProjectModel {
   final List<Map<String, dynamic>>? pathVideos;
   final List<Map<String, dynamic>>? pathDocuments;
   final List<Map<String, dynamic>>? advisors;
+  final List<UnitModel>? units; // Unidades disponibles (cuando se incluyen en getProject)
+  final Map<String, dynamic>? unitsPagination; // Paginación de unidades
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -80,6 +84,8 @@ class ProjectModel {
     this.pathVideos,
     this.pathDocuments,
     this.advisors,
+    this.units,
+    this.unitsPagination,
     this.createdAt,
     this.updatedAt,
   });
@@ -139,6 +145,14 @@ class ProjectModel {
           : null,
       advisors: json['advisors'] != null
           ? List<Map<String, dynamic>>.from(json['advisors'] as List)
+          : null,
+      units: json['units'] != null
+          ? (json['units'] as List<dynamic>)
+              .map((item) => UnitModel.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : null,
+      unitsPagination: json['units_pagination'] != null
+          ? Map<String, dynamic>.from(json['units_pagination'] as Map)
           : null,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)

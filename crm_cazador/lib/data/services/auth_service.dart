@@ -37,10 +37,13 @@ class AuthService {
         throw ApiException('Token o usuario no recibido');
       }
 
-      // Verificar que el usuario sea vendedor (cazador)
+      // Permite: Administrador, Lider y Cazador (vendedor)
+      // NO permite: Dateros
       final user = UserModel.fromJson(userData);
-      if (user.role?.toLowerCase() != 'vendedor') {
-        throw ApiException('Acceso denegado. Solo usuarios con rol vendedor pueden acceder.');
+      final role = user.role?.toLowerCase();
+      final allowedRoles = ['administrador', 'lider', 'vendedor'];
+      if (role == null || !allowedRoles.contains(role)) {
+        throw ApiException('Acceso denegado. Solo usuarios con rol Administrador, Lider o Cazador pueden acceder.');
       }
 
       // Guardar token
@@ -71,7 +74,7 @@ class AuthService {
         throw ApiException(errorMessage ?? 'Credenciales inválidas');
       } else if (e.response?.statusCode == 403) {
         throw ApiException(
-          errorMessage ?? 'Acceso denegado. Solo usuarios con rol vendedor pueden acceder.',
+          errorMessage ?? 'Acceso denegado. Solo usuarios con rol Administrador, Lider o Cazador pueden acceder.',
         );
       } else if (e.response?.statusCode == 422) {
         final errors = e.response?.data['errors'] as Map<String, dynamic>?;

@@ -3,7 +3,7 @@ description: "Aplicación móvil Flutter para sistema CRM inmobiliario - Cazador
 publish_to: 'none'
 author: Wolf Developers
 
-version: 1.0.0+1
+version: 1.2.0+1
 
 environment:
   sdk: ^3.2.0
@@ -53,6 +53,9 @@ dependencies:
   # Iconos adicionales
   cupertino_icons: ^1.0.6
   font_awesome_flutter: ^10.6.0
+
+  # Selección de imágenes
+  image_picker: ^1.0.0
 
 dev_dependencies:
   flutter_test:

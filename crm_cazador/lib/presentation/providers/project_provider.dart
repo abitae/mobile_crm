@@ -263,11 +263,28 @@ final projectsProvider = Provider<ProjectsState>((ref) {
 });
 
 /// Provider para un proyecto específico
+/// 
+/// Según la documentación, acepta parámetros opcionales:
+/// - `unitsPerPage`: Unidades por página (máximo 100, por defecto 15)
+/// - `includeUnits`: Incluir unidades en la respuesta (por defecto true)
 final projectProvider = FutureProvider.family<ProjectModel, int>((ref, id) async {
   return await ProjectService.getProject(id);
 });
 
+/// Provider para un proyecto específico con opciones
+final projectWithOptionsProvider = FutureProvider.family<ProjectModel, ({int id, int? unitsPerPage, bool? includeUnits})>((ref, params) async {
+  return await ProjectService.getProject(
+    params.id,
+    unitsPerPage: params.unitsPerPage,
+    includeUnits: params.includeUnits,
+  );
+});
+
 /// Estado de unidades de un proyecto
+/// 
+/// Según la documentación:
+/// - Solo se muestran unidades con estado "disponible"
+/// - Solo acepta parámetros de paginación (per_page, page)
 class ProjectUnitsState {
   final List<UnitModel> units;
   final bool isLoading;
@@ -276,14 +293,6 @@ class ProjectUnitsState {
   final int currentPage;
   final int totalPages;
   final bool hasMore;
-  final String? statusFilter;
-  final String? unitTypeFilter;
-  final double? minPriceFilter;
-  final double? maxPriceFilter;
-  final double? minAreaFilter;
-  final double? maxAreaFilter;
-  final int? bedroomsFilter;
-  final bool? onlyAvailableFilter;
 
   ProjectUnitsState({
     List<UnitModel>? units,
@@ -293,14 +302,6 @@ class ProjectUnitsState {
     int? currentPage,
     int? totalPages,
     bool? hasMore,
-    this.statusFilter,
-    this.unitTypeFilter,
-    this.minPriceFilter,
-    this.maxPriceFilter,
-    this.minAreaFilter,
-    this.maxAreaFilter,
-    this.bedroomsFilter,
-    this.onlyAvailableFilter,
   })  : units = units ?? const [],
         isLoading = isLoading ?? false,
         isLoadingMore = isLoadingMore ?? false,
@@ -316,14 +317,6 @@ class ProjectUnitsState {
     int? currentPage,
     int? totalPages,
     bool? hasMore,
-    String? statusFilter,
-    String? unitTypeFilter,
-    double? minPriceFilter,
-    double? maxPriceFilter,
-    double? minAreaFilter,
-    double? maxAreaFilter,
-    int? bedroomsFilter,
-    bool? onlyAvailableFilter,
   }) {
     return ProjectUnitsState(
       units: units ?? this.units,
@@ -333,14 +326,6 @@ class ProjectUnitsState {
       currentPage: currentPage ?? this.currentPage,
       totalPages: totalPages ?? this.totalPages,
       hasMore: hasMore ?? this.hasMore,
-      statusFilter: statusFilter ?? this.statusFilter,
-      unitTypeFilter: unitTypeFilter ?? this.unitTypeFilter,
-      minPriceFilter: minPriceFilter ?? this.minPriceFilter,
-      maxPriceFilter: maxPriceFilter ?? this.maxPriceFilter,
-      minAreaFilter: minAreaFilter ?? this.minAreaFilter,
-      maxAreaFilter: maxAreaFilter ?? this.maxAreaFilter,
-      bedroomsFilter: bedroomsFilter ?? this.bedroomsFilter,
-      onlyAvailableFilter: onlyAvailableFilter ?? this.onlyAvailableFilter,
     );
   }
 }
@@ -350,36 +335,39 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
   final int projectId;
 
   ProjectUnitsNotifier(this.projectId) : super(ProjectUnitsState()) {
-    loadUnits();
+    // Cargar unidades después de que el widget esté construido
+    Future.microtask(() => loadUnits());
   }
 
   /// Getter público para acceder al estado
   ProjectUnitsState get currentState => state;
 
-  /// Cargar unidades
+  /// Cargar unidades disponibles
+  /// 
+  /// Según la documentación, solo se muestran unidades con estado "disponible"
+  /// y se ordenan por manzana y número de unidad
   Future<void> loadUnits({bool refresh = false}) async {
+    // Evitar múltiples cargas simultáneas
+    if (state.isLoading && !refresh) return;
+    
     if (refresh) {
-      state = state.copyWith(isLoading: true, error: null, currentPage: 1);
+      // Invalidar caché al hacer refresh
+      ProjectService.invalidateUnitsCache(projectId);
+      state = state.copyWith(isLoading: true, error: null, currentPage: 1, units: []);
     } else {
       state = state.copyWith(isLoading: true, error: null);
     }
 
     try {
+      final pageToLoad = refresh ? 1 : state.currentPage;
       final response = await ProjectService.getProjectUnits(
         projectId: projectId,
-        page: refresh ? 1 : state.currentPage,
+        page: pageToLoad,
         perPage: 15,
-        status: state.statusFilter,
-        unitType: state.unitTypeFilter,
-        minPrice: state.minPriceFilter,
-        maxPrice: state.maxPriceFilter,
-        minArea: state.minAreaFilter,
-        maxArea: state.maxAreaFilter,
-        bedrooms: state.bedroomsFilter,
-        onlyAvailable: state.onlyAvailableFilter,
+        useCache: !refresh, // Usar caché solo si no es refresh
       );
 
-      state = state.copyWith(
+      final newState = state.copyWith(
         units: refresh ? response.data : [...state.units, ...response.data],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
@@ -387,12 +375,22 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
         isLoading: false,
         error: null,
       );
+      
+      // Actualizar el estado - esto debería notificar a los listeners
+      state = newState;
+      
+      // Debug: verificar que el estado se actualizó
+      print('✅ [ProjectUnitsNotifier] Estado actualizado: ${state.units.length} unidades');
     } on ApiException catch (e) {
+      // Debug: error de API
+      // print('API Error loading units: ${e.message}');
       state = state.copyWith(
         isLoading: false,
         error: e.message,
       );
     } catch (e) {
+      // Debug: error inesperado
+      // print('Unexpected error loading units: $e');
       state = state.copyWith(
         isLoading: false,
         error: 'Error inesperado: ${e.toString()}',
@@ -400,7 +398,7 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
     }
   }
 
-  /// Cargar más unidades
+  /// Cargar más unidades (paginación)
   Future<void> loadMoreUnits() async {
     if (state.isLoadingMore || !state.hasMore) return;
 
@@ -411,14 +409,6 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
         projectId: projectId,
         page: nextPage,
         perPage: 15,
-        status: state.statusFilter,
-        unitType: state.unitTypeFilter,
-        minPrice: state.minPriceFilter,
-        maxPrice: state.maxPriceFilter,
-        minArea: state.minAreaFilter,
-        maxArea: state.maxAreaFilter,
-        bedrooms: state.bedroomsFilter,
-        onlyAvailable: state.onlyAvailableFilter,
       );
 
       state = state.copyWith(
@@ -440,47 +430,6 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
       );
     }
   }
-
-  /// Aplicar filtros
-  void setFilters({
-    String? status,
-    String? unitType,
-    double? minPrice,
-    double? maxPrice,
-    double? minArea,
-    double? maxArea,
-    int? bedrooms,
-    bool? onlyAvailable,
-  }) {
-    state = state.copyWith(
-      statusFilter: status,
-      unitTypeFilter: unitType,
-      minPriceFilter: minPrice,
-      maxPriceFilter: maxPrice,
-      minAreaFilter: minArea,
-      maxAreaFilter: maxArea,
-      bedroomsFilter: bedrooms,
-      onlyAvailableFilter: onlyAvailable,
-      currentPage: 1,
-    );
-    loadUnits(refresh: true);
-  }
-
-  /// Limpiar filtros
-  void clearFilters() {
-    state = state.copyWith(
-      statusFilter: null,
-      unitTypeFilter: null,
-      minPriceFilter: null,
-      maxPriceFilter: null,
-      minAreaFilter: null,
-      maxAreaFilter: null,
-      bedroomsFilter: null,
-      onlyAvailableFilter: null,
-      currentPage: 1,
-    );
-    loadUnits(refresh: true);
-  }
 }
 
 /// Provider de unidades por proyecto
@@ -492,10 +441,14 @@ final projectUnitsNotifierProvider = Provider.family<ProjectUnitsNotifier, int>(
 
 /// Provider de estado de unidades (reactivo)
 /// Observa el notifier y accede al estado actual
+/// Nota: En Riverpod 3.0 con StateNotifier, el provider se actualiza
+/// cuando el notifier cambia, pero necesitamos observar el estado directamente
 final projectUnitsProvider = Provider.family<ProjectUnitsState, int>((ref, projectId) {
-  // Observar el notifier para que el provider se actualice cuando cambie
-  ref.watch(projectUnitsNotifierProvider(projectId));
+  // Observar el notifier
+  final notifier = ref.watch(projectUnitsNotifierProvider(projectId));
   // Retornar el estado actual
-  return ref.read(projectUnitsNotifierProvider(projectId)).currentState;
+  // Para que sea reactivo, el widget debe observar este provider
+  // y el notifier debe notificar cambios cuando actualice el estado
+  return notifier.currentState;
 });
 

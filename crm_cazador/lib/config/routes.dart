@@ -5,9 +5,15 @@ import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/projects/projects_list_screen.dart';
 import '../../presentation/screens/projects/project_detail_screen.dart';
 import '../../presentation/screens/projects/project_units_screen.dart';
+import '../../presentation/screens/projects/project_select_screen.dart';
 import '../../presentation/screens/clients/clients_list_screen.dart';
 import '../../presentation/screens/clients/client_detail_screen.dart';
 import '../../presentation/screens/clients/client_form_screen.dart';
+import '../../presentation/screens/clients/client_select_screen.dart';
+import '../../presentation/screens/reservations/reservations_list_screen.dart';
+import '../../presentation/screens/reservations/reservation_detail_screen.dart';
+import '../../presentation/screens/reservations/reservation_form_screen.dart';
+import '../../presentation/screens/reservations/reservation_confirm_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/settings/api_config_screen.dart';
 import '../../presentation/screens/settings/change_password_screen.dart';
@@ -76,6 +82,11 @@ final routesProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/projects/select',
+        name: 'project-select',
+        builder: (context, state) => const ProjectSelectScreen(),
+      ),
+      GoRoute(
         path: '/clients',
         name: 'clients',
         builder: (context, state) => const ClientsListScreen(),
@@ -99,6 +110,45 @@ final routesProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
           return ClientDetailScreen(clientId: id);
+        },
+      ),
+      GoRoute(
+        path: '/clients/select',
+        name: 'client-select',
+        builder: (context, state) => const ClientSelectScreen(),
+      ),
+      GoRoute(
+        path: '/reservations',
+        name: 'reservations',
+        builder: (context, state) => const ReservationsListScreen(),
+      ),
+      GoRoute(
+        path: '/reservations/new',
+        name: 'reservation-new',
+        builder: (context, state) => const ReservationFormScreen(),
+      ),
+      GoRoute(
+        path: '/reservations/:id',
+        name: 'reservation-detail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ReservationDetailScreen(reservationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/reservations/:id/edit',
+        name: 'reservation-edit',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ReservationFormScreen(reservationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/reservations/:id/confirm',
+        name: 'reservation-confirm',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return ReservationConfirmScreen(reservationId: id);
         },
       ),
       GoRoute(
