@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_icons.dart';
 import '../../widgets/common/ler_logo.dart';
+import '../../widgets/common/numeric_keypad.dart';
 
 /// Pantalla de login
 class LoginScreen extends ConsumerStatefulWidget {
@@ -15,10 +17,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _dniController = TextEditingController();
+  String _pin = '';
   bool _rememberMe = false;
-  bool _obscurePassword = true;
   bool _isLoading = false;
   
   @override
@@ -43,21 +44,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _dniController.dispose();
     super.dispose();
+  }
+
+  void _onNumberPressed(String number) {
+    if (_pin.length < 6) {
+      setState(() {
+        _pin += number;
+      });
+    }
+  }
+
+  void _onDeletePressed() {
+    if (_pin.isNotEmpty) {
+      setState(() {
+        _pin = _pin.substring(0, _pin.length - 1);
+      });
+    }
   }
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Validar PIN
+    if (_pin.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('El PIN debe tener 6 dígitos'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
     });
 
     final success = await ref.read(authNotifierProvider).login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+          dni: _dniController.text.trim(),
+          pin: _pin,
           rememberMe: _rememberMe,
         );
 
@@ -147,55 +174,107 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 48),
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _dniController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(8),
+                    ],
                     decoration: InputDecoration(
-                      labelText: 'Email',
-                      hintText: 'tu@email.com',
-                      prefixIcon: Icon(AppIcons.email),
+                      labelText: 'DNI',
+                      hintText: '12345678',
+                      prefixIcon: Icon(AppIcons.login),
+                      helperText: 'Ingresa tu DNI de 8 dígitos',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu email';
+                        return 'Por favor ingresa tu DNI';
                       }
-                      // Validación de email más robusta
-                      final emailRegex = RegExp(
-                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                      );
-                      if (!emailRegex.hasMatch(value.trim())) {
-                        return 'Email inválido';
+                      if (value.length != 8) {
+                        return 'El DNI debe tener 8 dígitos';
+                      }
+                      if (!RegExp(r'^\d+$').hasMatch(value)) {
+                        return 'El DNI solo debe contener números';
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 24),
+                  // Campo PIN con indicadores visuales
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PIN',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: List.generate(6, (index) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.outline,
+                                  width: 2,
+                                ),
+                                color: index < _pin.length
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.transparent,
+                              ),
+                              child: index < _pin.length
+                                  ? Icon(
+                                      Icons.circle,
+                                      size: 16,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                    )
+                                  : null,
+                            );
+                          }),
+                        ),
+                      ),
+                      if (_pin.length < 6)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Ingresa tu PIN de 6 dígitos',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Panel numérico
+                  NumericKeypad(
+                    onNumberPressed: _onNumberPressed,
+                    onDeletePressed: _onDeletePressed,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Contraseña',
-                      hintText: '••••••••',
-                      prefixIcon: Icon(AppIcons.login),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
+                  // Validación del PIN
+                  if (_pin.isNotEmpty && _pin.length != 6)
+                    Text(
+                      'El PIN debe tener 6 dígitos',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Por favor ingresa tu contraseña';
-                      }
-                      return null;
-                    },
-                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [

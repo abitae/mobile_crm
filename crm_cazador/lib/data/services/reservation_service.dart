@@ -52,8 +52,29 @@ class ReservationService {
       // Verificar estructura de respuesta
       if (responseData['success'] == false) {
         final errorMsg = responseData['message'] as String? ?? 'Error desconocido';
-        print('❌ [ReservationService] API retornó success=false: $errorMsg');
-        throw ApiException(errorMsg);
+        final errors = responseData['errors'] as Map<String, dynamic>?;
+        
+        // Extraer mensaje de error más específico si existe
+        String? specificError;
+        if (errors != null && errors.isNotEmpty) {
+          // Intentar obtener el primer error disponible
+          final errorValues = errors.values.toList();
+          if (errorValues.isNotEmpty) {
+            final firstError = errorValues.first;
+            if (firstError is String) {
+              specificError = firstError;
+            } else if (firstError is List && firstError.isNotEmpty) {
+              specificError = firstError.first.toString();
+            } else if (firstError is Map && firstError.isNotEmpty) {
+              specificError = firstError.values.first.toString();
+            }
+          }
+        }
+        
+        final finalErrorMsg = specificError ?? errorMsg;
+        print('❌ [ReservationService] API retornó success=false: $finalErrorMsg');
+        print('❌ [ReservationService] Errores completos: $errors');
+        throw ApiException(finalErrorMsg);
       }
       
       final dataObj = responseData['data'] as Map<String, dynamic>?;

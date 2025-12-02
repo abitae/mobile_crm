@@ -7,7 +7,10 @@ import '../../presentation/screens/clients/client_detail_screen.dart';
 import '../../presentation/screens/clients/client_form_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/settings/api_config_screen.dart';
-import '../../presentation/screens/settings/change_password_screen.dart';
+import '../../presentation/screens/settings/change_pin_screen.dart';
+import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/commissions/commissions_list_screen.dart';
+import '../../presentation/screens/commissions/commission_detail_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -96,9 +99,27 @@ final routesProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ApiConfigScreen(),
       ),
       GoRoute(
-        path: '/settings/change-password',
-        name: 'change-password',
-        builder: (context, state) => const ChangePasswordScreen(),
+        path: '/settings/change-pin',
+        name: 'change-pin',
+        builder: (context, state) => const ChangePinScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/commissions',
+        name: 'commissions',
+        builder: (context, state) => const CommissionsListScreen(),
+      ),
+      GoRoute(
+        path: '/commissions/:id',
+        name: 'commission-detail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return CommissionDetailScreen(commissionId: id);
+        },
       ),
     ],
   );

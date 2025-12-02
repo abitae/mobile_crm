@@ -312,13 +312,19 @@ class ReservationClient {
   });
 
   factory ReservationClient.fromJson(Map<String, dynamic> json) {
-    return ReservationClient(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      phone: json['phone'] as String?,
-      documentType: json['document_type'] as String?,
-      documentNumber: json['document_number'] as String?,
-    );
+    try {
+      return ReservationClient(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        phone: json['phone'] as String?,
+        documentType: json['document_type'] as String?,
+        documentNumber: json['document_number'] as String?,
+      );
+    } catch (e) {
+      print('⚠️ [ReservationClient] Error al parsear: $e');
+      print('⚠️ [ReservationClient] JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -349,13 +355,19 @@ class ReservationProject {
   });
 
   factory ReservationProject.fromJson(Map<String, dynamic> json) {
-    return ReservationProject(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      address: json['address'] as String?,
-      district: json['district'] as String?,
-      province: json['province'] as String?,
-    );
+    try {
+      return ReservationProject(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        address: json['address'] as String?,
+        district: json['district'] as String?,
+        province: json['province'] as String?,
+      );
+    } catch (e) {
+      print('⚠️ [ReservationProject] Error al parsear: $e');
+      print('⚠️ [ReservationProject] JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -392,22 +404,28 @@ class ReservationUnit {
   });
 
   factory ReservationUnit.fromJson(Map<String, dynamic> json) {
-    return ReservationUnit(
-      id: json['id'] as int? ?? 0,
-      unitManzana: json['unit_manzana'] as String?,
-      unitNumber: json['unit_number'] as String? ?? '',
-      fullIdentifier: json['full_identifier'] as String?,
-      area: json['area'] != null ? (json['area'] as num).toDouble() : null,
-      basePrice: json['base_price'] != null
-          ? (json['base_price'] as num).toDouble()
-          : null,
-      totalPrice: json['total_price'] != null
-          ? (json['total_price'] as num).toDouble()
-          : null,
-      finalPrice: json['final_price'] != null
-          ? (json['final_price'] as num).toDouble()
-          : null,
-    );
+    try {
+      return ReservationUnit(
+        id: json['id'] as int? ?? 0,
+        unitManzana: json['unit_manzana'] as String?,
+        unitNumber: json['unit_number'] as String? ?? '',
+        fullIdentifier: json['full_identifier'] as String?,
+        area: json['area'] != null ? (json['area'] as num).toDouble() : null,
+        basePrice: json['base_price'] != null
+            ? (json['base_price'] as num).toDouble()
+            : null,
+        totalPrice: json['total_price'] != null
+            ? (json['total_price'] as num).toDouble()
+            : null,
+        finalPrice: json['final_price'] != null
+            ? (json['final_price'] as num).toDouble()
+            : null,
+      );
+    } catch (e) {
+      print('⚠️ [ReservationUnit] Error al parsear: $e');
+      print('⚠️ [ReservationUnit] JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -437,11 +455,17 @@ class ReservationAdvisor {
   });
 
   factory ReservationAdvisor.fromJson(Map<String, dynamic> json) {
-    return ReservationAdvisor(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      email: json['email'] as String?,
-    );
+    try {
+      return ReservationAdvisor(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        email: json['email'] as String?,
+      );
+    } catch (e) {
+      print('⚠️ [ReservationAdvisor] Error al parsear: $e');
+      print('⚠️ [ReservationAdvisor] JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {

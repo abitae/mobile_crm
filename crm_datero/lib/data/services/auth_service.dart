@@ -6,18 +6,103 @@ import '../../core/exceptions/api_exception.dart';
 
 /// Servicio de autenticación
 class AuthService {
-  /// Login de usuario
-  static Future<Map<String, dynamic>> login({
+  /// Registro de datero
+  static Future<Map<String, dynamic>> register({
+    required String name,
     required String email,
-    required String password,
+    required String phone,
+    required String dni,
+    required String pin,
+    required int liderId,
+    String? banco,
+    String? cuentaBancaria,
+    String? cciBancaria,
+  }) async {
+    try {
+      final response = await ApiService.post(
+        '/datero/auth/register',
+        data: {
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'dni': dni,
+          'pin': pin,
+          'lider_id': liderId,
+          if (banco != null) 'banco': banco,
+          if (cuentaBancaria != null) 'cuenta_bancaria': cuentaBancaria,
+          if (cciBancaria != null) 'cci_bancaria': cciBancaria,
+        },
+      );
+
+      final responseData = response.data as Map<String, dynamic>;
+      
+      final dataObj = responseData['data'] as Map<String, dynamic>?;
+      
+      if (dataObj == null) {
+        throw ApiException('Respuesta inválida del servidor');
+      }
+
+      final token = dataObj['token'] as String?;
+      final userData = dataObj['user'] as Map<String, dynamic>?;
+
+      if (token == null || userData == null) {
+        throw ApiException('Token o usuario no recibido');
+      }
+
+      final user = UserModel.fromJson(userData);
+      if (!user.isDatero) {
+        throw ApiException('Acceso denegado. Solo usuarios datero pueden acceder.');
+      }
+
+      await StorageService.saveToken(token);
+
+      final refreshToken = dataObj['refresh_token'] as String?;
+      if (refreshToken != null) {
+        await StorageService.saveRefreshToken(refreshToken);
+      }
+
+      return {
+        'user': user,
+        'token': token,
+      };
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      String? errorMessage;
+      
+      if (responseData is Map<String, dynamic>) {
+        errorMessage = responseData['message'] as String?;
+      }
+
+      if (e.response?.statusCode == 422) {
+        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
+        final specificError = errors?.values.first?.first.toString();
+        throw ApiException(
+          specificError ?? errorMessage ?? 'Error de validación',
+        );
+      } else if (e.response?.statusCode == 409) {
+        throw ApiException(errorMessage ?? 'El DNI o email ya está registrado');
+      } else if (e.response?.statusCode == 429) {
+        throw ApiException(errorMessage ?? 'Too Many Requests');
+      }
+      throw ApiException(errorMessage ?? 'Error de conexión. Verifica tu internet.');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error inesperado: ${e.toString()}');
+    }
+  }
+
+  /// Login de usuario con DNI y PIN
+  static Future<Map<String, dynamic>> login({
+    required String dni,
+    required String pin,
     bool rememberMe = false,
   }) async {
     try {
       final response = await ApiService.post(
         '/datero/auth/login',
         data: {
-          'email': email,
-          'password': password,
+          'dni': dni,
+          'pin': pin,
         },
       );
 
@@ -182,19 +267,19 @@ class AuthService {
     }
   }
 
-  /// Cambiar contraseña del usuario
-  static Future<void> changePassword({
-    required String currentPassword,
-    required String newPassword,
-    required String newPasswordConfirmation,
+  /// Cambiar PIN del usuario
+  static Future<void> changePin({
+    required String currentPin,
+    required String newPin,
+    required String newPinConfirmation,
   }) async {
     try {
       await ApiService.post(
-        '/datero/auth/change-password',
+        '/datero/auth/change-pin',
         data: {
-          'current_password': currentPassword,
-          'new_password': newPassword,
-          'new_password_confirmation': newPasswordConfirmation,
+          'current_pin': currentPin,
+          'new_pin': newPin,
+          'new_pin_confirmation': newPinConfirmation,
         },
       );
     } on DioException catch (e) {

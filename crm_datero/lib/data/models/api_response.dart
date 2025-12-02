@@ -58,6 +58,7 @@ class PaginatedResponse<T> {
   ) {
     // Manejar estructura de respuesta de la API según documentación:
     // { "success": true, "data": { "clients": [...], "pagination": {...} } }
+    // o { "success": true, "data": { "commissions": [...], "pagination": {...} } }
     final dataObj = json['data'];
     
     // Si data es un objeto con 'clients' y 'pagination', usar esa estructura
@@ -67,6 +68,20 @@ class PaginatedResponse<T> {
       
       return PaginatedResponse<T>(
         data: clients.map((item) => fromJsonT(item)).toList(),
+        currentPage: pagination['current_page'] as int? ?? 1,
+        totalPages: pagination['last_page'] as int? ?? 1,
+        totalItems: pagination['total'] as int? ?? 0,
+        perPage: pagination['per_page'] as int? ?? 15,
+      );
+    }
+    
+    // Si data es un objeto con 'commissions' y 'pagination', usar esa estructura
+    if (dataObj is Map<String, dynamic> && dataObj.containsKey('commissions')) {
+      final commissions = dataObj['commissions'] as List<dynamic>? ?? [];
+      final pagination = dataObj['pagination'] as Map<String, dynamic>? ?? {};
+      
+      return PaginatedResponse<T>(
+        data: commissions.map((item) => fromJsonT(item)).toList(),
         currentPage: pagination['current_page'] as int? ?? 1,
         totalPages: pagination['last_page'] as int? ?? 1,
         totalItems: pagination['total'] as int? ?? 0,

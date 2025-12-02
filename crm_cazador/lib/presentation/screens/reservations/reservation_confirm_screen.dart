@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../providers/reservation_provider.dart';
+import '../../providers/project_provider.dart';
 import '../../../data/services/reservation_service.dart';
+import '../../../data/services/project_service.dart';
 import '../../../core/exceptions/api_exception.dart';
 
 /// Pantalla para confirmar una reserva con imagen
@@ -34,6 +36,7 @@ class _ReservationConfirmScreenState
   DateTime? _reservationDate;
   DateTime? _expirationDate;
   String? _paymentStatus;
+  int? _projectId;
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -67,6 +70,7 @@ class _ReservationConfirmScreenState
       _paymentMethodController.text = reservation.paymentMethod ?? '';
       _paymentReferenceController.text = reservation.paymentReference ?? '';
       _paymentStatus = reservation.paymentStatus;
+      _projectId = reservation.projectId;
 
       setState(() {
         _isInitialized = true;
@@ -188,21 +192,45 @@ class _ReservationConfirmScreenState
         additionalData['payment_reference'] = _paymentReferenceController.text;
       }
 
-      await ReservationService.confirmReservation(
+      final confirmedReservation = await ReservationService.confirmReservation(
         widget.reservationId,
         _selectedImage!.path,
         additionalData: additionalData.isEmpty ? null : additionalData,
       );
 
       if (mounted) {
+        // Invalidar y refrescar la reserva individual
+        ref.invalidate(reservationProvider(widget.reservationId));
+        
+        // Refrescar la lista de reservas
+        ref.read(reservationsNotifierProvider).refreshReservations();
+        
+        // Refrescar las unidades disponibles del proyecto
+        // Usar el projectId de la reserva confirmada (puede ser diferente al inicial)
+        // o el guardado inicialmente como respaldo
+        final projectIdToRefresh = confirmedReservation.projectId > 0 
+            ? confirmedReservation.projectId 
+            : (_projectId ?? 0);
+        if (projectIdToRefresh > 0) {
+          // Invalidar el caché de unidades del proyecto
+          ProjectService.invalidateUnitsCache(projectIdToRefresh);
+          
+          // Refrescar el provider de unidades si existe
+          try {
+            final unitsNotifier = ref.read(projectUnitsNotifierProvider(projectIdToRefresh));
+            await unitsNotifier.loadUnits(refresh: true);
+          } catch (e) {
+            // Si el provider no existe (no está siendo usado), solo invalidamos el caché
+            print('⚠️ [ReservationConfirm] Provider de unidades no disponible: $e');
+          }
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Reserva confirmada exitosamente'),
             backgroundColor: Colors.green,
           ),
         );
-        ref.invalidate(reservationProvider(widget.reservationId));
-        ref.read(reservationsNotifierProvider).refreshReservations();
         context.pop();
       }
     } on ApiException catch (e) {

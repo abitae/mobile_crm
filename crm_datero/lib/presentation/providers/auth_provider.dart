@@ -77,17 +77,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Login
+  /// Login con DNI y PIN
   Future<bool> login({
-    required String email,
-    required String password,
+    required String dni,
+    required String pin,
     bool rememberMe = false,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final result = await AuthService.login(
-        email: email,
-        password: password,
+        dni: dni,
+        pin: pin,
         rememberMe: rememberMe,
       );
 

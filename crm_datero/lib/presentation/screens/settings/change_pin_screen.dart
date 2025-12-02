@@ -3,34 +3,34 @@ import '../../../data/services/auth_service.dart';
 import '../../../core/exceptions/api_exception.dart';
 import '../../theme/app_icons.dart';
 
-/// Pantalla de cambio de contraseña
-class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+/// Pantalla de cambio de PIN
+class ChangePinScreen extends StatefulWidget {
+  const ChangePinScreen({super.key});
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  State<ChangePinScreen> createState() => _ChangePinScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePinScreenState extends State<ChangePinScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _currentPasswordController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _currentPinController = TextEditingController();
+  final _newPinController = TextEditingController();
+  final _confirmPinController = TextEditingController();
 
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
+  bool _obscureCurrentPin = true;
+  bool _obscureNewPin = true;
+  bool _obscureConfirmPin = true;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _currentPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _currentPinController.dispose();
+    _newPinController.dispose();
+    _confirmPinController.dispose();
     super.dispose();
   }
 
-  Future<void> _changePassword() async {
+  Future<void> _changePin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -40,24 +40,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     });
 
     try {
-      await AuthService.changePassword(
-        currentPassword: _currentPasswordController.text,
-        newPassword: _newPasswordController.text,
-        newPasswordConfirmation: _confirmPasswordController.text,
+      await AuthService.changePin(
+        currentPin: _currentPinController.text,
+        newPin: _newPinController.text,
+        newPinConfirmation: _confirmPinController.text,
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Contraseña actualizada exitosamente'),
+            content: Text('PIN actualizado exitosamente'),
             backgroundColor: Colors.green,
           ),
         );
 
         // Limpiar formulario
-        _currentPasswordController.clear();
-        _newPasswordController.clear();
-        _confirmPasswordController.clear();
+        _currentPinController.clear();
+        _newPinController.clear();
+        _confirmPinController.clear();
 
         // Regresar a la pantalla anterior
         Navigator.of(context).pop();
@@ -93,7 +93,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cambiar Contraseña'),
+        title: const Text('Cambiar PIN'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -109,92 +109,111 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Cambiar tu contraseña',
+                'Cambiar tu PIN',
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Ingresa tu contraseña actual y la nueva contraseña',
+                'Ingresa tu PIN actual y el nuevo PIN',
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               TextFormField(
-                controller: _currentPasswordController,
-                obscureText: _obscureCurrentPassword,
+                controller: _currentPinController,
+                keyboardType: TextInputType.number,
+                obscureText: _obscureCurrentPin,
+                maxLength: 6,
                 decoration: InputDecoration(
-                  labelText: 'Contraseña actual',
+                  labelText: 'PIN actual',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureCurrentPassword
+                      _obscureCurrentPin
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                     ),
                     onPressed: () {
                       setState(() {
-                        _obscureCurrentPassword = !_obscureCurrentPassword;
+                        _obscureCurrentPin = !_obscureCurrentPin;
                       });
                     },
                   ),
                   border: const OutlineInputBorder(),
+                  helperText: '6 dígitos numéricos',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'La contraseña actual es obligatoria';
+                    return 'El PIN actual es obligatorio';
+                  }
+                  if (value.length != 6) {
+                    return 'El PIN debe tener 6 dígitos';
+                  }
+                  if (!RegExp(r'^\d+$').hasMatch(value)) {
+                    return 'El PIN solo debe contener números';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _newPasswordController,
-                obscureText: _obscureNewPassword,
+                controller: _newPinController,
+                keyboardType: TextInputType.number,
+                obscureText: _obscureNewPin,
+                maxLength: 6,
                 decoration: InputDecoration(
-                  labelText: 'Nueva contraseña',
+                  labelText: 'Nuevo PIN',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureNewPassword
+                      _obscureNewPin
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                     ),
                     onPressed: () {
                       setState(() {
-                        _obscureNewPassword = !_obscureNewPassword;
+                        _obscureNewPin = !_obscureNewPin;
                       });
                     },
                   ),
                   border: const OutlineInputBorder(),
-                  helperText: 'Mínimo 6 caracteres',
+                  helperText: '6 dígitos numéricos',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'La nueva contraseña es obligatoria';
+                    return 'El nuevo PIN es obligatorio';
                   }
-                  if (value.length < 6) {
-                    return 'La contraseña debe tener al menos 6 caracteres';
+                  if (value.length != 6) {
+                    return 'El PIN debe tener 6 dígitos';
+                  }
+                  if (!RegExp(r'^\d+$').hasMatch(value)) {
+                    return 'El PIN solo debe contener números';
+                  }
+                  if (value == _currentPinController.text) {
+                    return 'El nuevo PIN debe ser diferente al actual';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: _obscureConfirmPassword,
+                controller: _confirmPinController,
+                keyboardType: TextInputType.number,
+                obscureText: _obscureConfirmPin,
+                maxLength: 6,
                 decoration: InputDecoration(
-                  labelText: 'Confirmar nueva contraseña',
+                  labelText: 'Confirmar nuevo PIN',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword
+                      _obscureConfirmPin
                           ? Icons.visibility_outlined
                           : Icons.visibility_off_outlined,
                     ),
                     onPressed: () {
                       setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                        _obscureConfirmPin = !_obscureConfirmPin;
                       });
                     },
                   ),
@@ -202,17 +221,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'La confirmación de contraseña es obligatoria';
+                    return 'La confirmación de PIN es obligatoria';
                   }
-                  if (value != _newPasswordController.text) {
-                    return 'Las contraseñas no coinciden';
+                  if (value != _newPinController.text) {
+                    return 'Los PINs no coinciden';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 32),
               FilledButton(
-                onPressed: _isLoading ? null : _changePassword,
+                onPressed: _isLoading ? null : _changePin,
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -225,7 +244,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Cambiar Contraseña'),
+                    : const Text('Cambiar PIN'),
               ),
             ],
           ),
