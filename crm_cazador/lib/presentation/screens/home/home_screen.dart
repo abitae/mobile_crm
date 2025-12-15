@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../projects/projects_list_screen.dart';
 import '../clients/clients_list_screen.dart';
 import '../reservations/reservations_list_screen.dart';
+import '../dateros/dateros_list_screen.dart';
 import '../../widgets/common/ler_logo.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
@@ -51,6 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Clientes',
           ),
           NavigationDestination(
+            icon: Icon(Icons.person_search_outlined),
+            selectedIcon: Icon(Icons.person_search),
+            label: 'Dateros',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.business_outlined),
             selectedIcon: Icon(Icons.business),
             label: 'Proyectos',
@@ -72,8 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         return const ClientsListScreen();
       case 2:
-        return const ProjectsListScreen();
+        return const DaterosListScreen();
       case 3:
+        return const ProjectsListScreen();
+      case 4:
         return const ReservationsListScreen();
       default:
         return _buildHomeContent();

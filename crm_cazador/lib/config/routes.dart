@@ -17,6 +17,9 @@ import '../../presentation/screens/reservations/reservation_confirm_screen.dart'
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/settings/api_config_screen.dart';
 import '../../presentation/screens/settings/change_password_screen.dart';
+import '../../presentation/screens/dateros/dateros_list_screen.dart';
+import '../../presentation/screens/dateros/datero_detail_screen.dart';
+import '../../presentation/screens/dateros/datero_form_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -151,6 +154,32 @@ final routesProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
           return ReservationConfirmScreen(reservationId: id);
+        },
+      ),
+      GoRoute(
+        path: '/dateros',
+        name: 'dateros',
+        builder: (context, state) => const DaterosListScreen(),
+      ),
+      GoRoute(
+        path: '/dateros/new',
+        name: 'datero-new',
+        builder: (context, state) => const DateroFormScreen(),
+      ),
+      GoRoute(
+        path: '/dateros/:id/edit',
+        name: 'datero-edit',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return DateroFormScreen(dateroId: id);
+        },
+      ),
+      GoRoute(
+        path: '/dateros/:id',
+        name: 'datero-detail',
+        builder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          return DateroDetailScreen(dateroId: id);
         },
       ),
       GoRoute(

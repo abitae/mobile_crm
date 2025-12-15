@@ -1,5 +1,13 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 
@@ -13,6 +21,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final GlobalKey _qrKey = GlobalKey();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -26,9 +35,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(profileNotifierProvider).loadProfile();
-    });
   }
 
   @override
@@ -43,7 +49,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   void _loadProfileData() {
-    final profileState = ref.read(profileProvider);
+    final notifier = ref.read(profileNotifierProvider);
+    final profileState = notifier.currentState;
     if (profileState.profile != null) {
       final profile = profileState.profile!;
       _nameController.text = profile.name;
@@ -56,10 +63,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  String? get _registroUrl {
+    final notifier = ref.read(profileNotifierProvider);
+    final profileState = notifier.currentState;
+    final profile = profileState.profile;
+    if (profile == null) return null;
+
+    return 'https://crm.lotesenremate.pe/clients/registro-datero/${profile.id}';
+  }
+
+  Future<void> _shareQr() async {
+    try {
+      final renderObject = _qrKey.currentContext?.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) {
+        throw Exception('QR no disponible');
+      }
+
+      final ui.Image image = await renderObject.toImage(pixelRatio: 3.0);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/qr_registro_datero.png');
+      await file.writeAsBytes(pngBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text:
+            'Escanea este código para registrarte como cliente en LER Datero.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo compartir el código QR'),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(profileNotifierProvider).updateProfile(
+    final success =
+        await ref.read(profileNotifierProvider).updateProfile(
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
           phone: _phoneController.text.trim().isEmpty
@@ -102,7 +150,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profileState = ref.watch(profileProvider);
+    final notifier = ref.watch(profileNotifierProvider);
+    final profileState = notifier.currentState;
 
     if (!_isInitialized && profileState.profile != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -147,21 +196,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (profileState.profile != null) ...[
-                      // Información no editable
+                      // QR de registro + compartir
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                'Información de Cuenta',
+                                'QR de registro de clientes',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
+                              const SizedBox(height: 12),
+                              RepaintBoundary(
+                                key: _qrKey,
+                                child: Container(
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.all(12),
+                                  child: QrImageView(
+                                    data: _registroUrl ?? '',
+                                    size: 200,
+                                    version: QrVersions.auto,
+                                    gapless: true,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_registroUrl != null)
+                                Text(
+                                  _registroUrl!,
+                                  textAlign: TextAlign.center,
+                                  style:
+                                      Theme.of(context).textTheme.bodySmall,
+                                ),
                               const SizedBox(height: 16),
-                              _buildInfoRow('DNI', profileState.profile!.dni ?? 'No disponible'),
-                              const Divider(),
-                              _buildInfoRow('Rol', profileState.profile!.role ?? 'datero'),
+                              FilledButton.icon(
+                                onPressed: _shareQr,
+                                icon: const Icon(Icons.share),
+                                label: const Text('Compartir QR'),
+                              ),
                             ],
                           ),
                         ),

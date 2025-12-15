@@ -148,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
             child: Form(
               key: _formKey,
               child: Column(
@@ -156,23 +156,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const LerLogo(
-                    height: 100,
+                    height: 90,
                     showTagline: false,
                     appName: 'LER Datero',
                   ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Bienvenido',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Inicia sesión para continuar',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _dniController,
                     keyboardType: TextInputType.number,
@@ -186,6 +174,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: Icon(AppIcons.login),
                       helperText: 'Ingresa tu DNI de 8 dígitos',
                     ),
+                    onChanged: (value) {
+                      // Cerrar el teclado automáticamente cuando se ingresen 8 dígitos
+                      if (value.length == 8) {
+                        FocusScope.of(context).unfocus();
+                      }
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Por favor ingresa tu DNI';
@@ -199,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   // Campo PIN con indicadores visuales
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +202,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         'PIN',
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,

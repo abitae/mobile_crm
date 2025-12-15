@@ -9,6 +9,7 @@ import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/screens/settings/api_config_screen.dart';
 import '../../presentation/screens/settings/change_pin_screen.dart';
 import '../../presentation/screens/profile/profile_screen.dart';
+import '../../presentation/screens/profile/datero_qr_screen.dart';
 import '../../presentation/screens/commissions/commissions_list_screen.dart';
 import '../../presentation/screens/commissions/commission_detail_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
@@ -107,6 +108,11 @@ final routesProvider = Provider<GoRouter>((ref) {
         path: '/profile',
         name: 'profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/qr',
+        name: 'profile-qr',
+        builder: (context, state) => const DateroQrScreen(),
       ),
       GoRoute(
         path: '/commissions',

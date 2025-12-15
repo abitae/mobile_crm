@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 /// Widget para mostrar el logo de Lotesenremate.pe
+///
+/// Usa la imagen oficial `ler_logo.png` ubicada en `assets/images/ler_logo.png`,
+/// que corresponde al mismo logo configurado para Android en
+/// `android/assets/images/ler_logo.png`.
 class LerLogo extends StatelessWidget {
   final double? height;
   final bool showTagline;
@@ -16,126 +20,34 @@ class LerLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
-    // Colores del logo según la descripción
-    const brightGreen = Color(0xFF00C853); // Verde brillante
-    const darkBlue = Color(0xFF1A237E); // Azul oscuro
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo con icono arquitectónico y texto
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Icono arquitectónico (estilizado)
-            Container(
-              height: height,
-              width: height! * 0.6,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Stack(
-                children: [
-                  // Forma azul oscura (vertical)
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: height! * 0.25,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: darkBlue,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(8),
-                          bottomLeft: Radius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Forma verde (techo y extensión)
-                  Positioned(
-                    left: height! * 0.15,
-                    top: 0,
-                    child: Container(
-                      width: height! * 0.45,
-                      height: height! * 0.4,
-                      decoration: BoxDecoration(
-                        color: brightGreen,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Línea vertical verde
-                  Positioned(
-                    left: height! * 0.15,
-                    top: height! * 0.4,
-                    bottom: 0,
-                    width: height! * 0.1,
-                    child: Container(
-                      color: brightGreen,
-                    ),
-                  ),
-                  // Extensión horizontal verde
-                  Positioned(
-                    left: height! * 0.25,
-                    top: height! * 0.6,
-                    right: -height! * 0.1,
-                    height: height! * 0.15,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: brightGreen,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        // Logo oficial desde asset
+        Image.asset(
+          'assets/images/ler_logo.png',
+          height: height,
+          fit: BoxFit.contain,
+        ),
+        if (showTagline || appName != null) ...[
+          const SizedBox(height: 8),
+          if (showTagline)
+            const Text(
+              'Somos parte de Tus Sueños',
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: 12),
-            // Texto "Lotesenremate.pe"
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Lotesenremate.pe',
-                  style: TextStyle(
-                    fontSize: height! * 0.25,
-                    fontWeight: FontWeight.bold,
-                    color: brightGreen,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                if (showTagline) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Somos parte de Tus Sueños',
-                    style: TextStyle(
-                      fontSize: height! * 0.12,
-                      color: darkBlue,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-                if (appName != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    appName!,
-                    style: TextStyle(
-                      fontSize: height! * 0.15,
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ],
+          if (appName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              appName!,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
-        ),
+        ],
       ],
     );
   }

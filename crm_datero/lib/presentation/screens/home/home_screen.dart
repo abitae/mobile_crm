@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../clients/clients_list_screen.dart';
 import '../commissions/commissions_list_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../providers/profile_provider.dart';
 import '../../widgets/common/ler_logo.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
@@ -19,18 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('LER Datero'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              context.push('/settings');
-            },
-            tooltip: 'Configuración',
-          ),
-        ],
-      ),
       body: _buildBody(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -85,60 +76,188 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = theme.colorScheme;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Hero section mejorado
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.secondaryContainer,
-                    ],
+      child: Column(
+        children: [
+          // Header superior con logo y botón de configuración
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                LerLogo(
+                  height: 40,
+                  showTagline: false,
+                  appName: 'LER Datero',
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () {
+                    context.push('/settings');
+                  },
+                  tooltip: 'Configuración',
+                ),
+              ],
+            ),
+          ),
+          // Contenido desplazable
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Tarjeta resumen / bienvenida
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            colorScheme.primaryContainer,
+                            colorScheme.secondaryContainer,
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tu panel de datero',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Accede rápidamente a tus clientes, comisiones y comparte tu QR de registro.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onPrimaryContainer
+                                  .withOpacity(0.9),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        colorScheme.onPrimaryContainer,
+                                    side: BorderSide(
+                                      color: colorScheme.onPrimaryContainer
+                                          .withOpacity(0.3),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    context.push('/clients');
+                                  },
+                                  icon: const Icon(Icons.people),
+                                  label: const Text('Ver clientes'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor:
+                                        colorScheme.onPrimaryContainer,
+                                    side: BorderSide(
+                                      color: colorScheme.onPrimaryContainer
+                                          .withOpacity(0.3),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    context.push('/commissions');
+                                  },
+                                  icon: const Icon(Icons.payments),
+                                  label: const Text('Ver comisiones'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                padding: const EdgeInsets.all(40.0),
-                child: Column(
-                  children: [
-                    LerLogo(
-                      height: 100,
-                      showTagline: false,
-                      appName: 'LER Datero',
+                  const SizedBox(height: 24),
+                  // Bloque QR
+                  Consumer(
+              builder: (context, ref, _) {
+                final notifier = ref.watch(profileNotifierProvider);
+                final profileState = notifier.currentState;
+                if (profileState.isLoading && profileState.profile == null) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                final profile = profileState.profile;
+                if (profile == null) {
+                  return const SizedBox.shrink();
+                }
+
+                final url =
+                    'https://crm.lotesenremate.pe/clients/registro-datero/${profile.id}';
+
+                return Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'QR de registro de clientes',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            Icon(
+                              Icons.qr_code_2,
+                              color: colorScheme.primary,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.all(12),
+                          child: QrImageView(
+                            data: url,
+                            size: 180,
+                            version: QrVersions.auto,
+                            gapless: true,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          url,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Bienvenido',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Gestiona tus clientes de forma eficiente',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onPrimaryContainer.withOpacity(0.9),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                  ),
+                );
+              },
+            ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
