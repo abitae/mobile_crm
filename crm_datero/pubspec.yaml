@@ -3,7 +3,7 @@ description: "Aplicación móvil Flutter para sistema CRM inmobiliario - Datero"
 publish_to: 'none'
 author: Wolf Developers
 
-version: 1.0.0+1
+version: 1.1.0+1
 
 environment:
   sdk: ^3.2.0
