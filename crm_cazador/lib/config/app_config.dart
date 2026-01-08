@@ -8,9 +8,9 @@ class AppConfig {
   static const String defaultProductionUrl =
       'https://crm.lotesenremate.pe/api';
   static const String defaultStagingUrl =
-      'https://crm.lotesenremate.pe/api';
+      'https://crm-stag.lotesenremate.pe/api';
   static const String defaultDevelopmentUrl =
-      'https://crm.lotesenremate.pe/api';
+      'https://crm-dev.lotesenremate.pe/api';
 
   // URL por defecto (puede ser sobreescrita por configuración del usuario)
   static String get defaultBaseUrl => defaultProductionUrl;
