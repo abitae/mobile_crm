@@ -5,6 +5,8 @@ import '../../providers/reservation_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeletons/reservation_list_skeleton.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../widgets/reservations/reservation_card.dart';
 
 /// Pantalla de listado de reservas
@@ -237,7 +239,7 @@ class _ReservationsListScreenState
 
   Widget _buildBody(ReservationsState state) {
     if (state.isLoading && state.reservations.isEmpty) {
-      return const LoadingIndicator();
+      return const ReservationListSkeleton();
     }
 
     if (state.error != null && state.reservations.isEmpty) {
@@ -273,11 +275,14 @@ class _ReservationsListScreenState
         }
 
         final reservation = state.reservations[index];
-        return ReservationCard(
-          reservation: reservation,
-          onTap: () {
-            context.push('/reservations/${reservation.id}');
-          },
+        return StaggerAnimation(
+          index: index,
+          child: ReservationCard(
+            reservation: reservation,
+            onTap: () {
+              context.push('/reservations/${reservation.id}');
+            },
+          ),
         );
       },
     );

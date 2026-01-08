@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/ler_logo.dart';
+import '../../widgets/common/custom_snackbar.dart';
 
 /// Pantalla de login con Material 3
 class LoginScreen extends ConsumerStatefulWidget {
@@ -68,12 +69,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Inicio de sesión exitoso'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 1),
-        ),
+      CustomSnackbar.show(
+        context,
+        'Inicio de sesión exitoso',
+        type: SnackbarType.success,
+        duration: const Duration(seconds: 1),
       );
 
       await Future.delayed(const Duration(milliseconds: 300));
@@ -88,11 +88,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } else {
       final authState = ref.read(authProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authState.error ?? 'Error al iniciar sesión'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      CustomSnackbar.show(
+        context,
+        authState.error ?? 'Error al iniciar sesión',
+        type: SnackbarType.error,
       );
     }
   }

@@ -5,6 +5,8 @@ import '../../providers/datero_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeletons/datero_list_skeleton.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../theme/app_icons.dart';
 import '../../../data/models/datero_model.dart';
 
@@ -140,7 +142,7 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
 
   Widget _buildBody(DaterosState state) {
     if (state.isLoading && state.dateros.isEmpty) {
-      return const LoadingIndicator();
+      return const DateroListSkeleton();
     }
 
     if (state.error != null && state.dateros.isEmpty) {
@@ -177,14 +179,17 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
         }
 
         final datero = state.dateros[index];
-        return _DateroCard(
-          key: ValueKey('datero_${datero.id}'),
-          datero: datero,
-          onTap: () {
-            if (datero.id != null) {
-              context.push('/dateros/${datero.id}');
-            }
-          },
+        return StaggerAnimation(
+          index: index,
+          child: _DateroCard(
+            key: ValueKey('datero_${datero.id}'),
+            datero: datero,
+            onTap: () {
+              if (datero.id != null) {
+                context.push('/dateros/${datero.id}');
+              }
+            },
+          ),
         );
       },
     );

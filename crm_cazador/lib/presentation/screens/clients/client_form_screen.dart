@@ -7,6 +7,8 @@ import '../../../data/services/document_service.dart';
 import '../../../data/models/client_model.dart';
 import '../../../data/models/client_options.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeletons/client_form_skeleton.dart';
+import '../../widgets/common/custom_snackbar.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'package:intl/intl.dart';
 
@@ -88,8 +90,10 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al cargar cliente: $e')),
+        CustomSnackbar.show(
+          context,
+          'Error al cargar cliente: $e',
+          type: SnackbarType.error,
         );
         context.pop();
       }
@@ -164,19 +168,18 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
         // El tipo de documento siempre es DNI
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Datos encontrados y cargados exitosamente'),
-              backgroundColor: Colors.green,
-            ),
+          CustomSnackbar.show(
+            context,
+            'Datos encontrados y cargados exitosamente',
+            type: SnackbarType.success,
           );
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No se encontró información para este DNI'),
-            ),
+          CustomSnackbar.show(
+            context,
+            'No se encontró información para este DNI',
+            type: SnackbarType.info,
           );
         }
       }
@@ -184,32 +187,21 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
       if (mounted) {
         // Mostrar mensaje de error con duración más larga para errores importantes
         final isClientRegistered = e.message.contains('registrado');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: isClientRegistered 
-                ? Colors.orange 
-                : Theme.of(context).colorScheme.error,
-            duration: isClientRegistered 
-                ? const Duration(seconds: 5) 
-                : const Duration(seconds: 3),
-            action: isClientRegistered
-                ? SnackBarAction(
-                    label: 'OK',
-                    textColor: Colors.white,
-                    onPressed: () {},
-                  )
-                : null,
-          ),
+        CustomSnackbar.show(
+          context,
+          e.message,
+          type: isClientRegistered ? SnackbarType.warning : SnackbarType.error,
+          duration: isClientRegistered 
+              ? const Duration(seconds: 5) 
+              : const Duration(seconds: 3),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al buscar documento: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+        CustomSnackbar.show(
+          context,
+          'Error al buscar documento: $e',
+          type: SnackbarType.error,
         );
       }
     } finally {
@@ -315,7 +307,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
 
     if (!_isInitialized && widget.clientId != null) {
       return const Scaffold(
-        body: LoadingIndicator(),
+        body: ClientFormSkeleton(),
       );
     }
 

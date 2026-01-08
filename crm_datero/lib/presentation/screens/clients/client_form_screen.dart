@@ -7,6 +7,7 @@ import '../../../data/services/document_service.dart';
 import '../../../data/models/client_model.dart';
 import '../../../data/models/client_options.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loader.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'package:intl/intl.dart';
 
@@ -315,7 +316,10 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
 
     if (!_isInitialized && widget.clientId != null) {
       return const Scaffold(
-        body: LoadingIndicator(),
+        body: LoadingIndicator(
+          useSkeleton: true,
+          skeletonType: SkeletonType.form,
+        ),
       );
     }
 

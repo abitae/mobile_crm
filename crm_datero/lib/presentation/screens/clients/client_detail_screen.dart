@@ -7,6 +7,7 @@ import '../../providers/client_provider.dart';
 import '../../../data/services/client_service.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
+import '../../widgets/common/skeleton_loader.dart';
 import '../../../data/models/client_model.dart' as models;
 import '../../../core/exceptions/api_exception.dart';
 
@@ -67,7 +68,10 @@ class ClientDetailScreen extends ConsumerWidget {
       ),
       body: clientAsync.when(
         data: (client) => _buildClientDetail(context, ref, client),
-        loading: () => const LoadingIndicator(),
+        loading: () => const LoadingIndicator(
+          useSkeleton: true,
+          skeletonType: SkeletonType.clientDetail,
+        ),
         error: (error, stack) => AppErrorWidget(
           message: error.toString(),
           onRetry: () {

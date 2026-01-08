@@ -5,6 +5,8 @@ import '../../providers/client_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeletons/client_list_skeleton.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../theme/app_icons.dart';
 import '../../../data/models/client_options.dart';
 import 'widgets/client_card.dart';
@@ -233,7 +235,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   Widget _buildBody(ClientsState state) {
     if (state.isLoading && state.clients.isEmpty) {
-      return const LoadingIndicator();
+      return const ClientListSkeleton();
     }
 
     if (state.error != null && state.clients.isEmpty) {
@@ -270,12 +272,15 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
         }
 
         final client = state.clients[index];
-        return ClientCard(
-          key: ValueKey('client_${client.id}'), // Key única para evitar duplicados en renderizado
-          client: client,
-          onTap: () {
-            context.push('/clients/${client.id}');
-          },
+        return StaggerAnimation(
+          index: index,
+          child: ClientCard(
+            key: ValueKey('client_${client.id}'), // Key única para evitar duplicados en renderizado
+            client: client,
+            onTap: () {
+              context.push('/clients/${client.id}');
+            },
+          ),
         );
       },
     );

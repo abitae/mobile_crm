@@ -6,6 +6,7 @@ import '../../../data/models/project_model.dart';
 import '../../providers/project_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
+import '../../widgets/common/skeletons/project_detail_skeleton.dart';
 import '../../../config/api_config.dart';
 import 'package:intl/intl.dart';
 
@@ -28,7 +29,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       ),
       body: projectAsync.when(
         data: (project) => _buildProjectDetail(context, project),
-        loading: () => const LoadingIndicator(),
+        loading: () => const ProjectDetailSkeleton(),
         error: (error, stack) => AppErrorWidget(
           message: error.toString(),
           onRetry: () {

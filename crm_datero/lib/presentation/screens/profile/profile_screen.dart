@@ -10,6 +10,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../widgets/common/skeleton_loader.dart';
 
 /// Pantalla de perfil del datero
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -187,7 +188,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
       body: profileState.isLoading && profileState.profile == null
-          ? const LoadingIndicator()
+          ? const LoadingIndicator(
+              useSkeleton: true,
+              skeletonType: SkeletonType.profile,
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Form(

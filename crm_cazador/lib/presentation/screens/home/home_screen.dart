@@ -5,6 +5,7 @@ import '../clients/clients_list_screen.dart';
 import '../reservations/reservations_list_screen.dart';
 import '../dateros/dateros_list_screen.dart';
 import '../../widgets/common/ler_logo.dart';
+import '../../utils/animation_utils.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
 class HomeScreen extends StatefulWidget {
@@ -14,8 +15,32 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  late PageController _pageController;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedIndex);
+    _animationController = AnimationController(
+      vsync: this,
+      duration: AnimationUtils.defaultDuration,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +57,36 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: FadeTransition(
+        opacity: _animation,
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          children: [
+            _buildHomeContent(),
+            const ClientsListScreen(),
+            const DaterosListScreen(),
+            const ProjectsListScreen(),
+            const ReservationsListScreen(),
+          ],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
           });
+          _pageController.animateToPage(
+            index,
+            duration: AnimationUtils.defaultDuration,
+            curve: Curves.easeOut,
+          );
+          _animationController.forward(from: 0.0);
         },
         destinations: const [
           NavigationDestination(
@@ -69,23 +117,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  Widget _buildBody() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildHomeContent();
-      case 1:
-        return const ClientsListScreen();
-      case 2:
-        return const DaterosListScreen();
-      case 3:
-        return const ProjectsListScreen();
-      case 4:
-        return const ReservationsListScreen();
-      default:
-        return _buildHomeContent();
-    }
   }
 
   Widget _buildHomeContent() {

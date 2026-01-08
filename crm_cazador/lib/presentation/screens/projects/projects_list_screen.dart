@@ -5,6 +5,8 @@ import '../../providers/project_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeletons/project_list_skeleton.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../widgets/projects/project_card.dart';
 
 /// Pantalla de listado de proyectos
@@ -230,7 +232,7 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
 
   Widget _buildBody(ProjectsState state) {
     if (state.isLoading && state.projects.isEmpty) {
-      return const LoadingIndicator();
+      return const ProjectListSkeleton();
     }
 
     if (state.error != null && state.projects.isEmpty) {
@@ -266,11 +268,14 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
         }
 
         final project = state.projects[index];
-        return ProjectCard(
-          project: project,
-          onTap: () {
-            context.push('/projects/${project.id}');
-          },
+        return StaggerAnimation(
+          index: index,
+          child: ProjectCard(
+            project: project,
+            onTap: () {
+              context.push('/projects/${project.id}');
+            },
+          ),
         );
       },
     );

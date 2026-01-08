@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/datero_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
+import '../../widgets/common/skeletons/datero_detail_skeleton.dart';
 import '../../../data/models/datero_model.dart';
 
 /// Pantalla de detalle de datero
@@ -51,7 +52,7 @@ class DateroDetailScreen extends ConsumerWidget {
       ),
       body: dateroAsync.when(
         data: (datero) => _buildDetail(context, ref, datero),
-        loading: () => const LoadingIndicator(),
+        loading: () => DateroDetailSkeleton(),
         error: (error, stack) => AppErrorWidget(
           message: error.toString(),
           onRetry: () {

@@ -16,8 +16,25 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
+  late AnimationController _navController;
+
+  @override
+  void initState() {
+    super.initState();
+    _navController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _navController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +43,14 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
+          _navController.forward(from: 0.0).then((_) {
+            _navController.reverse();
+          });
           setState(() {
             _selectedIndex = index;
           });
         },
+        animationDuration: const Duration(milliseconds: 200),
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

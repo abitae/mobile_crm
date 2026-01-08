@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/splash_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
@@ -14,6 +15,7 @@ import '../../presentation/screens/commissions/commissions_list_screen.dart';
 import '../../presentation/screens/commissions/commission_detail_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../presentation/utils/animation_utils.dart';
 
 /// Configuración de rutas de la aplicación
 final routesProvider = Provider<GoRouter>((ref) {
@@ -54,80 +56,214 @@ final routesProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const LoginScreen(),
+          state,
+          transitionType: TransitionType.fade,
+        ),
       ),
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const HomeScreen(),
+          state,
+          transitionType: TransitionType.fade,
+        ),
       ),
       GoRoute(
         path: '/clients',
         name: 'clients',
-        builder: (context, state) => const ClientsListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ClientsListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       // Las rutas estáticas específicas deben ir ANTES de las rutas con parámetros
       GoRoute(
         path: '/clients/new',
         name: 'client-new',
-        builder: (context, state) => const ClientFormScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ClientFormScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/clients/:id/edit',
         name: 'client-edit',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ClientFormScreen(clientId: id);
+          return _buildPageWithTransition(
+            ClientFormScreen(clientId: id),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
         },
       ),
       // La ruta genérica con parámetro debe ir al final
       GoRoute(
         path: '/clients/:id',
         name: 'client-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ClientDetailScreen(clientId: id);
+          return _buildPageWithTransition(
+            ClientDetailScreen(clientId: id),
+            state,
+            transitionType: TransitionType.slideRight,
+          );
         },
       ),
       GoRoute(
         path: '/settings',
         name: 'settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const SettingsScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/settings/api',
         name: 'api-config',
-        builder: (context, state) => const ApiConfigScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ApiConfigScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/settings/change-pin',
         name: 'change-pin',
-        builder: (context, state) => const ChangePinScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ChangePinScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => const ProfileScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ProfileScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/profile/qr',
         name: 'profile-qr',
-        builder: (context, state) => const DateroQrScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const DateroQrScreen(),
+          state,
+          transitionType: TransitionType.scale,
+        ),
       ),
       GoRoute(
         path: '/commissions',
         name: 'commissions',
-        builder: (context, state) => const CommissionsListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const CommissionsListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/commissions/:id',
         name: 'commission-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return CommissionDetailScreen(commissionId: id);
+          return _buildPageWithTransition(
+            CommissionDetailScreen(commissionId: id),
+            state,
+            transitionType: TransitionType.slideRight,
+          );
         },
       ),
     ],
   );
 });
 
+enum TransitionType {
+  fade,
+  slideRight,
+  slideUp,
+  scale,
+}
+
+/// Construir página con transición personalizada
+CustomTransitionPage _buildPageWithTransition(
+  Widget child,
+  GoRouterState state, {
+  TransitionType transitionType = TransitionType.fade,
+}) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionType: transitionType,
+  );
+}
+
+/// Página personalizada con transiciones
+class CustomTransitionPage extends Page<void> {
+  final Widget child;
+  final TransitionType transitionType;
+
+  CustomTransitionPage({
+    required this.child,
+    super.key,
+    required this.transitionType,
+  });
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return PageRouteBuilder(
+      settings: this,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionDuration: AnimationUtils.defaultDuration,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        switch (transitionType) {
+          case TransitionType.fade:
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          case TransitionType.slideRight:
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: Curves.easeInOut),
+            );
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          case TransitionType.slideUp:
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            final tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: Curves.easeOut),
+            );
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          case TransitionType.scale:
+            return ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.fastOutSlowIn,
+                ),
+              ),
+              child: child,
+            );
+        }
+      },
+    );
+  }
+}
