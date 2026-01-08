@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../data/models/project_model.dart';
+import '../common/animated_card.dart';
 
 /// Widget para mostrar una tarjeta de proyecto
 class ProjectCard extends StatelessWidget {
@@ -18,23 +19,33 @@ class ProjectCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header con nombre y tipo
-              Row(
+    return AnimatedCard(
+      child: Card(
+        elevation: 4,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: colorScheme.outline.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
+                  // Header con nombre y tipo
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -65,29 +76,29 @@ class ProjectCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                  _buildStatusChip(context, project.status),
-                ],
-              ),
-              const SizedBox(height: 12),
-              
-              // Descripción
-              if (project.description != null && project.description!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
+                      ),
+                    _buildStatusChip(context, project.status),
+                  ],
+                ),
+                  const SizedBox(height: 12),
+                  
+                  // Descripción
+                  if (project.description != null && project.description!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
                     project.description!,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
 
-              // Ubicación
-              if (project.fullAddress != null || project.district != null)
-                Padding(
+                  // Ubicación
+                  if (project.fullAddress != null || project.district != null)
+                    Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     children: [
@@ -129,16 +140,16 @@ class ProjectCard extends StatelessWidget {
                   ),
                 ),
 
-              // Estadísticas de unidades
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
+                  // Estadísticas de unidades
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceVariant.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
                     _buildStatItem(
                       context,
                       'Total',
@@ -158,16 +169,16 @@ class ProjectCard extends StatelessWidget {
                       project.soldUnits.toString(),
                       Icons.sell_outlined,
                       colorScheme.secondary,
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-              // Progreso
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  // Progreso
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -184,40 +195,42 @@ class ProjectCard extends StatelessWidget {
                           color: colorScheme.primary,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  LinearProgressIndicator(
-                    value: project.progressPercentage / 100,
-                    backgroundColor: colorScheme.surfaceVariant,
-                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                    minHeight: 6,
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: project.progressPercentage / 100,
+                      backgroundColor: colorScheme.surfaceVariant,
+                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                      minHeight: 6,
+                    ),
+                  ],
+                ),
+
+                  // Etapa y estado legal
+                  if (project.stage != null || project.legalStatus != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (project.stage != null)
+                            _buildInfoChip(
+                              context,
+                              'Etapa: ${_getStageLabel(project.stage!)}',
+                            ),
+                          if (project.legalStatus != null)
+                            _buildInfoChip(
+                              context,
+                              'Legal: ${_getLegalStatusLabel(project.legalStatus!)}',
+                            ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-
-              // Etapa y estado legal
-              if (project.stage != null || project.legalStatus != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (project.stage != null)
-                        _buildInfoChip(
-                          context,
-                          'Etapa: ${_getStageLabel(project.stage!)}',
-                        ),
-                      if (project.legalStatus != null)
-                        _buildInfoChip(
-                          context,
-                          'Legal: ${_getLegalStatusLabel(project.legalStatus!)}',
-                        ),
-                    ],
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_icons.dart';
+import '../animations/fade_in_animation.dart';
+import '../animations/slide_animation.dart';
+import 'animated_button.dart';
 
 /// Widget de estado vacío
 class EmptyState extends StatelessWidget {
@@ -23,34 +26,46 @@ class EmptyState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+        child: FadeInAnimation(
+          child: SlideAnimation(
+            beginOffset: const Offset(0, 0.2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 80,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                if (action != null && actionLabel != null) ...[
+                  const SizedBox(height: 32),
+                  AnimatedButton(
+                    onPressed: action,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(AppIcons.addClient),
+                        const SizedBox(width: 8),
+                        Text(actionLabel!),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            if (action != null && actionLabel != null) ...[
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: action,
-                icon: Icon(AppIcons.addClient),
-                label: Text(actionLabel!),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

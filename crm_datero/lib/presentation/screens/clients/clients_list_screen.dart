@@ -5,6 +5,8 @@ import '../../providers/client_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeleton_loader.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../theme/app_icons.dart';
 import '../../../data/models/client_options.dart';
 import 'widgets/client_card.dart';
@@ -233,7 +235,11 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   Widget _buildBody(ClientsState state) {
     if (state.isLoading && state.clients.isEmpty) {
-      return const LoadingIndicator();
+      return const LoadingIndicator(
+        useSkeleton: true,
+        skeletonType: SkeletonType.clientCard,
+        itemCount: 5,
+      );
     }
 
     if (state.error != null && state.clients.isEmpty) {
@@ -269,11 +275,14 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
         }
 
         final client = state.clients[index];
-        return ClientCard(
-          client: client,
-          onTap: () {
-            context.push('/clients/${client.id}');
-          },
+        return StaggerAnimation(
+          index: index,
+          child: ClientCard(
+            client: client,
+            onTap: () {
+              context.push('/clients/${client.id}');
+            },
+          ),
         );
       },
     );

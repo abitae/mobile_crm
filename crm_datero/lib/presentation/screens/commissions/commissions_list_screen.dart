@@ -5,6 +5,8 @@ import '../../providers/commission_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/skeleton_loader.dart';
+import '../../widgets/animations/stagger_animation.dart';
 import '../../../data/models/commission_model.dart';
 import 'package:intl/intl.dart';
 
@@ -79,7 +81,11 @@ class _CommissionsListScreenState extends ConsumerState<CommissionsListScreen> {
             // Lista de comisiones
             Expanded(
               child: commissionState.isLoading && commissionState.commissions.isEmpty
-                  ? const LoadingIndicator()
+                  ? const LoadingIndicator(
+                      useSkeleton: true,
+                      skeletonType: SkeletonType.commissionCard,
+                      itemCount: 5,
+                    )
                   : commissionState.error != null && commissionState.commissions.isEmpty
                       ? AppErrorWidget(
                           message: commissionState.error!,
@@ -108,7 +114,10 @@ class _CommissionsListScreenState extends ConsumerState<CommissionsListScreen> {
                                   );
                                 }
                                 final commission = commissionState.commissions[index];
-                                return _buildCommissionCard(commission);
+                                return StaggerAnimation(
+                                  index: index,
+                                  child: _buildCommissionCard(commission),
+                                );
                               },
                             ),
             ),
@@ -205,13 +214,27 @@ class _CommissionsListScreenState extends ConsumerState<CommissionsListScreen> {
   Widget _buildCommissionCard(CommissionModel commission) {
     final formatter = NumberFormat.currency(symbol: 'S/ ', decimalDigits: 2);
     final dateFormatter = DateFormat('dd/MM/yyyy');
+    final theme = Theme.of(context);
 
     return Card(
+      elevation: 1,
       margin: const EdgeInsets.only(bottom: 12.0),
-      child: InkWell(
-        onTap: () {
-          context.push('/commissions/${commission.id}');
-        },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outline.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            context.push('/commissions/${commission.id}');
+          },
+          borderRadius: BorderRadius.circular(16),
+          splashColor: theme.colorScheme.primary.withOpacity(0.1),
+          highlightColor: theme.colorScheme.primary.withOpacity(0.05),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -278,6 +301,7 @@ class _CommissionsListScreenState extends ConsumerState<CommissionsListScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

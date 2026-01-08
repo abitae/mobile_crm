@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/reservation_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
+import '../../widgets/common/skeletons/reservation_detail_skeleton.dart';
 import '../../../data/services/reservation_service.dart';
 import '../../../core/exceptions/api_exception.dart';
 import 'reservation_cancel_dialog.dart';
@@ -42,7 +43,7 @@ class ReservationDetailScreen extends ConsumerWidget {
       ),
       body: reservationAsync.when(
         data: (reservation) => _buildReservationDetail(context, ref, reservation),
-        loading: () => const LoadingIndicator(),
+        loading: () => const ReservationDetailSkeleton(),
         error: (error, stackTrace) => AppErrorWidget(
           message: error is ApiException
               ? error.message

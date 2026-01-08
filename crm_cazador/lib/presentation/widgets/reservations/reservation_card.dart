@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/reservation_model.dart';
+import '../common/animated_card.dart';
 import 'package:intl/intl.dart';
 
 /// Widget para mostrar una tarjeta de reserva
@@ -20,21 +21,31 @@ class ReservationCard extends StatelessWidget {
     final currencyFormat = NumberFormat.currency(symbol: 'S/ ', decimalDigits: 0);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header: Número de reserva y estados
-              Row(
+    return AnimatedCard(
+      child: Card(
+        elevation: 4,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: colorScheme.outline.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Header: Número de reserva y estados
+                  Row(
+                    children: [
                   Expanded(
                     child: Text(
                       reservation.reservationNumber,
@@ -47,13 +58,13 @@ class ReservationCard extends StatelessWidget {
                   _buildStatusChip(context, reservation.status),
                   const SizedBox(width: 6),
                   _buildPaymentStatusChip(context, reservation.paymentStatus),
-                ],
-              ),
-              const SizedBox(height: 12),
-              
-              // Información del cliente
-              if (reservation.client != null) ...[
-                Row(
+                  ],
+                ),
+                  const SizedBox(height: 12),
+                  
+                  // Información del cliente
+                  if (reservation.client != null) ...[
+                    Row(
                   children: [
                     Icon(Icons.person_outline, size: 16, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 6),
@@ -65,13 +76,13 @@ class ReservationCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-              
-              // Información del proyecto y unidad
-              Row(
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                  
+                  // Información del proyecto y unidad
+                  Row(
                 children: [
                   Icon(Icons.business_outlined, size: 16, color: colorScheme.onSurfaceVariant),
                   const SizedBox(width: 6),
@@ -83,9 +94,9 @@ class ReservationCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (reservation.unit != null) ...[
-                const SizedBox(height: 4),
-                Row(
+                  if (reservation.unit != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
                   children: [
                     Icon(Icons.home_outlined, size: 16, color: colorScheme.onSurfaceVariant),
                     const SizedBox(width: 6),
@@ -97,10 +108,10 @@ class ReservationCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (reservation.unit!.unitManzana != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
+                    if (reservation.unit!.unitManzana != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
                       Icon(Icons.location_on_outlined, size: 16, color: colorScheme.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Expanded(
@@ -111,17 +122,17 @@ class ReservationCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
-                // Precios de la unidad
-                if (reservation.unit!.basePrice != null || 
-                    reservation.unit!.totalPrice != null || 
-                    reservation.unit!.finalPrice != null) ...[
-                  const SizedBox(height: 8),
-                  if (reservation.unit!.basePrice != null)
-                    Row(
-                      children: [
+                    // Precios de la unidad
+                    if (reservation.unit!.basePrice != null || 
+                        reservation.unit!.totalPrice != null || 
+                        reservation.unit!.finalPrice != null) ...[
+                      const SizedBox(height: 8),
+                      if (reservation.unit!.basePrice != null)
+                        Row(
+                          children: [
                         Icon(Icons.price_check_outlined, size: 14, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Expanded(
@@ -129,13 +140,13 @@ class ReservationCard extends StatelessWidget {
                             'Precio Base: ${currencyFormat.format(reservation.unit!.basePrice!)}',
                             style: theme.textTheme.bodySmall,
                           ),
-                        ),
-                      ],
-                    ),
-                  if (reservation.unit!.totalPrice != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
+                          ),
+                        ],
+                      ),
+                      if (reservation.unit!.totalPrice != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
                         Icon(Icons.calculate_outlined, size: 14, color: colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Expanded(
@@ -143,14 +154,14 @@ class ReservationCard extends StatelessWidget {
                             'Precio Total: ${currencyFormat.format(reservation.unit!.totalPrice!)}',
                             style: theme.textTheme.bodySmall,
                           ),
-                        ),
+                          ),
+                        ],
+                      ),
                       ],
-                    ),
-                  ],
-                  if (reservation.unit!.finalPrice != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
+                      if (reservation.unit!.finalPrice != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
                         Icon(Icons.attach_money, size: 14, color: Colors.green[700]!),
                         const SizedBox(width: 6),
                         Expanded(
@@ -161,71 +172,73 @@ class ReservationCard extends StatelessWidget {
                               color: Colors.green[700],
                             ),
                           ),
-                        ),
+                          ),
+                        ],
+                      ),
                       ],
+                    ],
+                  ],
+                  const SizedBox(height: 12),
+                  
+                  // Fechas y monto
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoItem(
+                          context,
+                          Icons.calendar_today_outlined,
+                          'Reserva',
+                          dateFormat.format(reservation.reservationDate),
+                        ),
+                      ),
+                      if (reservation.expirationDate != null)
+                        Expanded(
+                          child: _buildInfoItem(
+                            context,
+                            Icons.event_outlined,
+                            'Vence',
+                            dateFormat.format(reservation.expirationDate!),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _buildInfoItem(
+                    context,
+                    Icons.attach_money,
+                    'Monto',
+                    currencyFormat.format(reservation.reservationAmount),
+                  ),
+                  
+                  // Indicador de expiración próxima
+                  if (reservation.isExpiringSoon && reservation.daysUntilExpiration != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange[700]),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Expira en ${reservation.daysUntilExpiration} días',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ],
-              ],
-              const SizedBox(height: 12),
-              
-              // Fechas y monto
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoItem(
-                      context,
-                      Icons.calendar_today_outlined,
-                      'Reserva',
-                      dateFormat.format(reservation.reservationDate),
-                    ),
-                  ),
-                  if (reservation.expirationDate != null)
-                    Expanded(
-                      child: _buildInfoItem(
-                        context,
-                        Icons.event_outlined,
-                        'Vence',
-                        dateFormat.format(reservation.expirationDate!),
-                      ),
-                    ),
-                ],
               ),
-              const SizedBox(height: 8),
-              _buildInfoItem(
-                context,
-                Icons.attach_money,
-                'Monto',
-                currencyFormat.format(reservation.reservationAmount),
-              ),
-              
-              // Indicador de expiración próxima
-              if (reservation.isExpiringSoon && reservation.daysUntilExpiration != null) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange[700]),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Expira en ${reservation.daysUntilExpiration} días',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.orange[700],
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),

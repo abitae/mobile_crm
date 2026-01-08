@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
 import '../../presentation/screens/auth/login_screen.dart';
 import '../../presentation/screens/auth/splash_screen.dart';
 import '../../presentation/screens/home/home_screen.dart';
@@ -21,6 +22,7 @@ import '../../presentation/screens/dateros/dateros_list_screen.dart';
 import '../../presentation/screens/dateros/datero_detail_screen.dart';
 import '../../presentation/screens/dateros/datero_form_screen.dart';
 import '../../presentation/providers/auth_provider.dart';
+import '../../presentation/utils/animation_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Configuración de rutas de la aplicación
@@ -51,153 +53,331 @@ final routesProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         name: 'splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const SplashScreen(),
+          state,
+          transitionType: TransitionType.fade,
+        ),
       ),
       GoRoute(
         path: '/login',
         name: 'login',
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const LoginScreen(),
+          state,
+          transitionType: TransitionType.fade,
+        ),
       ),
       GoRoute(
         path: '/home',
         name: 'home',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const HomeScreen(),
+          state,
+          transitionType: TransitionType.fade,
+        ),
       ),
       GoRoute(
         path: '/projects',
         name: 'projects',
-        builder: (context, state) => const ProjectsListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ProjectsListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       // Rutas estáticas deben ir ANTES de las rutas con parámetros
       GoRoute(
         path: '/projects/select',
         name: 'project-select',
-        builder: (context, state) => const ProjectSelectScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ProjectSelectScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/projects/:id/units',
         name: 'project-units',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ProjectUnitsScreen(projectId: id);
+          return _buildPageWithTransition(
+            ProjectUnitsScreen(projectId: id),
+            state,
+            transitionType: TransitionType.slideRight,
+          );
         },
       ),
       GoRoute(
         path: '/projects/:id',
         name: 'project-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ProjectDetailScreen(projectId: id);
+          return _buildPageWithTransition(
+            ProjectDetailScreen(projectId: id),
+            state,
+            transitionType: TransitionType.fade,
+          );
         },
       ),
       GoRoute(
         path: '/clients',
         name: 'clients',
-        builder: (context, state) => const ClientsListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ClientsListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       // Rutas estáticas deben ir ANTES de las rutas con parámetros
       GoRoute(
         path: '/clients/new',
         name: 'client-new',
-        builder: (context, state) => const ClientFormScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ClientFormScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/clients/select',
         name: 'client-select',
-        builder: (context, state) => const ClientSelectScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ClientSelectScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/clients/:id/edit',
         name: 'client-edit',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ClientFormScreen(clientId: id);
+          return _buildPageWithTransition(
+            ClientFormScreen(clientId: id),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
         },
       ),
       GoRoute(
         path: '/clients/:id',
         name: 'client-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ClientDetailScreen(clientId: id);
+          return _buildPageWithTransition(
+            ClientDetailScreen(clientId: id),
+            state,
+            transitionType: TransitionType.fade,
+          );
         },
       ),
       GoRoute(
         path: '/reservations',
         name: 'reservations',
-        builder: (context, state) => const ReservationsListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ReservationsListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/reservations/new',
         name: 'reservation-new',
-        builder: (context, state) => const ReservationFormScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ReservationFormScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/reservations/:id',
         name: 'reservation-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ReservationDetailScreen(reservationId: id);
+          return _buildPageWithTransition(
+            ReservationDetailScreen(reservationId: id),
+            state,
+            transitionType: TransitionType.fade,
+          );
         },
       ),
       GoRoute(
         path: '/reservations/:id/edit',
         name: 'reservation-edit',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ReservationFormScreen(reservationId: id);
+          return _buildPageWithTransition(
+            ReservationFormScreen(reservationId: id),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
         },
       ),
       GoRoute(
         path: '/reservations/:id/confirm',
         name: 'reservation-confirm',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return ReservationConfirmScreen(reservationId: id);
+          return _buildPageWithTransition(
+            ReservationConfirmScreen(reservationId: id),
+            state,
+            transitionType: TransitionType.scale,
+          );
         },
       ),
       GoRoute(
         path: '/dateros',
         name: 'dateros',
-        builder: (context, state) => const DaterosListScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const DaterosListScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/dateros/new',
         name: 'datero-new',
-        builder: (context, state) => const DateroFormScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const DateroFormScreen(),
+          state,
+          transitionType: TransitionType.slideUp,
+        ),
       ),
       GoRoute(
         path: '/dateros/:id/edit',
         name: 'datero-edit',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return DateroFormScreen(dateroId: id);
+          return _buildPageWithTransition(
+            DateroFormScreen(dateroId: id),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
         },
       ),
       GoRoute(
         path: '/dateros/:id',
         name: 'datero-detail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = int.parse(state.pathParameters['id']!);
-          return DateroDetailScreen(dateroId: id);
+          return _buildPageWithTransition(
+            DateroDetailScreen(dateroId: id),
+            state,
+            transitionType: TransitionType.fade,
+          );
         },
       ),
       GoRoute(
         path: '/settings',
         name: 'settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const SettingsScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/settings/api',
         name: 'api-config',
-        builder: (context, state) => const ApiConfigScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ApiConfigScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
       GoRoute(
         path: '/settings/change-password',
         name: 'change-password',
-        builder: (context, state) => const ChangePasswordScreen(),
+        pageBuilder: (context, state) => _buildPageWithTransition(
+          const ChangePasswordScreen(),
+          state,
+          transitionType: TransitionType.slideRight,
+        ),
       ),
     ],
   );
 });
 
+enum TransitionType {
+  fade,
+  slideRight,
+  slideUp,
+  scale,
+}
+
+/// Construir página con transición personalizada
+CustomTransitionPage _buildPageWithTransition(
+  Widget child,
+  GoRouterState state, {
+  TransitionType transitionType = TransitionType.fade,
+}) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionType: transitionType,
+  );
+}
+
+/// Página personalizada con transiciones
+class CustomTransitionPage extends Page<void> {
+  final Widget child;
+  final TransitionType transitionType;
+
+  CustomTransitionPage({
+    required this.child,
+    super.key,
+    required this.transitionType,
+  });
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return PageRouteBuilder(
+      settings: this,
+      pageBuilder: (context, animation, secondaryAnimation) => child,
+      transitionDuration: AnimationUtils.defaultDuration,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        switch (transitionType) {
+          case TransitionType.fade:
+            return FadeTransition(
+              opacity: animation,
+              child: child,
+            );
+          case TransitionType.slideRight:
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            final tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: Curves.easeInOut),
+            );
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          case TransitionType.slideUp:
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            final tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: Curves.easeOut),
+            );
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          case TransitionType.scale:
+            return ScaleTransition(
+              scale: Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.fastOutSlowIn,
+                ),
+              ),
+              child: child,
+            );
+        }
+      },
+    );
+  }
+}

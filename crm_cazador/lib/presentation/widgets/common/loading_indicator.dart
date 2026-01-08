@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:crm_cazador/presentation/widgets/common/skeleton_loader.dart';
 
 /// Widget de carga
 class LoadingIndicator extends StatelessWidget {
-  const LoadingIndicator({super.key});
+  final bool isLoading;
+  final Widget? child;
+  final Widget? skeleton;
+
+  const LoadingIndicator({
+    super.key,
+    this.isLoading = true,
+    this.child,
+    this.skeleton,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    if (isLoading) {
+      return skeleton ?? const Center(child: CircularProgressIndicator());
+    }
+    return child ?? const SizedBox.shrink();
   }
 }
 
