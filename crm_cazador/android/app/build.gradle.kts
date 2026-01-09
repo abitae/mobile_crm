@@ -8,9 +8,16 @@ plugins {
 }
 
 val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
+// Buscar key.properties en android/key.properties o en la raíz del proyecto
+val keystorePropertiesFile = rootProject.file("key.properties").takeIf { it.exists() }
+    ?: rootProject.file("../key.properties").takeIf { it.exists() }
+    ?: file("key.properties").takeIf { it.exists() }
+
+if (keystorePropertiesFile != null && keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    println("✅ Keystore properties cargadas desde: ${keystorePropertiesFile.absolutePath}")
+} else {
+    println("⚠️ key.properties no encontrado. Usando firma de debug para release.")
 }
 
 android {
@@ -43,19 +50,37 @@ android {
         multiDexEnabled = true
     }
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile != null && keystorePropertiesFile.exists()) {
             val keyAlias = keystoreProperties["keyAlias"] as String?
             val keyPassword = keystoreProperties["keyPassword"] as String?
             val storeFile = keystoreProperties["storeFile"] as String?
             val storePassword = keystoreProperties["storePassword"] as String?
             
             if (keyAlias != null && keyPassword != null && storeFile != null && storePassword != null) {
-                create("release") {
-                    this.keyAlias = keyAlias
-                    this.keyPassword = keyPassword
-                    this.storeFile = file(storeFile)
-                    this.storePassword = storePassword
+                // Resolver la ruta del keystore (puede ser relativa o absoluta)
+                val keystorePath = if (storeFile.startsWith("/") || storeFile.contains(":\\")) {
+                    // Ruta absoluta
+                    file(storeFile)
+                } else {
+                    // Ruta relativa desde key.properties
+                    keystorePropertiesFile.parentFile?.resolve(storeFile)?.takeIf { it.exists() }
+                        ?: rootProject.file(storeFile).takeIf { it.exists() }
+                        ?: file(storeFile)
                 }
+                
+                if (keystorePath.exists()) {
+                    create("release") {
+                        this.keyAlias = keyAlias
+                        this.keyPassword = keyPassword
+                        this.storeFile = keystorePath
+                        this.storePassword = storePassword
+                    }
+                    println("✅ Configuración de firma release creada con keystore: ${keystorePath.absolutePath}")
+                } else {
+                    println("⚠️ Keystore no encontrado en: ${keystorePath.absolutePath}")
+                }
+            } else {
+                println("⚠️ Propiedades de keystore incompletas en key.properties")
             }
         }
     }
@@ -89,7 +114,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = if (keystorePropertiesFile.exists() && 
+            signingConfig = if (keystorePropertiesFile != null && 
+                keystorePropertiesFile.exists() && 
                 signingConfigs.findByName("release") != null) {
                 signingConfigs.getByName("release")
             } else {

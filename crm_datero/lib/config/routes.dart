@@ -19,33 +19,41 @@ import '../../presentation/utils/animation_utils.dart';
 
 /// Configuración de rutas de la aplicación
 final routesProvider = Provider<GoRouter>((ref) {
-  // Observar el notifier para asegurar que el router se actualice cuando el estado cambie
-  final authNotifier = ref.watch(authNotifierProvider);
-  // Observar también el provider para mantener compatibilidad
+  // Observar el estado de autenticación sin bloquear
   ref.watch(authProvider);
 
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      // Usar el estado del notifier directamente para obtener siempre el estado más reciente
-      final isAuthenticated = authNotifier.currentState.isAuthenticated;
-      final isLogin = state.matchedLocation == '/login';
-      final isSplash = state.matchedLocation == '/splash';
+      try {
+        // Usar el estado del notifier directamente para obtener siempre el estado más reciente
+        final authNotifier = ref.read(authNotifierProvider);
+        final isAuthenticated = authNotifier.currentState.isAuthenticated;
+        final isLogin = state.matchedLocation == '/login';
+        final isSplash = state.matchedLocation == '/splash';
 
-      // Si está en splash, no redirigir
-      if (isSplash) return null;
+        // Si está en splash, no redirigir
+        if (isSplash) return null;
 
-      // Si no está autenticado y no está en login, redirigir a login
-      if (!isAuthenticated && !isLogin) {
+        // Si no está autenticado y no está en login, redirigir a login
+        if (!isAuthenticated && !isLogin) {
+          return '/login';
+        }
+
+        // Si está autenticado y está en login, redirigir a home
+        if (isAuthenticated && isLogin) {
+          return '/home';
+        }
+
+        return null;
+      } catch (e) {
+        // Si hay un error, permitir navegación a splash o login
+        print('Error en redirect: $e');
+        final isSplash = state.matchedLocation == '/splash';
+        final isLogin = state.matchedLocation == '/login';
+        if (isSplash || isLogin) return null;
         return '/login';
       }
-
-      // Si está autenticado y está en login, redirigir a home
-      if (isAuthenticated && isLogin) {
-        return '/home';
-      }
-
-      return null;
     },
     routes: [
       GoRoute(

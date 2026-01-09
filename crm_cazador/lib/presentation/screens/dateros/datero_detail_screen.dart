@@ -39,6 +39,16 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
   }
 
   Future<void> _shareQr(DateroModel datero) async {
+    if (datero.id == null) {
+      if (!mounted) return;
+      CustomSnackbar.show(
+        context,
+        'El datero no tiene un ID válido',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
     try {
       final renderObject = _qrKey.currentContext?.findRenderObject();
       if (renderObject is! RenderRepaintBoundary) {
@@ -48,7 +58,10 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
       final ui.Image image = await renderObject.toImage(pixelRatio: 3.0);
       final byteData =
           await image.toByteData(format: ui.ImageByteFormat.png);
-      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+      if (byteData == null) {
+        throw Exception('No se pudo generar la imagen del QR');
+      }
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
 
       final tempDir = await getTemporaryDirectory();
       final file = File('${tempDir.path}/qr_datero_${datero.id}.png');
@@ -63,7 +76,7 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
       if (!mounted) return;
       CustomSnackbar.show(
         context,
-        'No se pudo compartir el código QR',
+        'No se pudo compartir el código QR: ${e.toString()}',
         type: SnackbarType.error,
       );
     }
@@ -84,9 +97,7 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
                 if (value == 'edit') {
                   context.push('/dateros/${widget.dateroId}/edit');
                 } else if (value == 'share_qr') {
-                  dateroAsync.whenData((datero) {
-                    _shareQr(datero);
-                  });
+                  _shareQr(datero);
                 }
               },
               itemBuilder: (context) => [
@@ -206,8 +217,10 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _buildQrSection(context, datero),
+          if (datero.id != null) ...[
+            const SizedBox(height: 16),
+            _buildQrSection(context, datero),
+          ],
           const SizedBox(height: 16),
           _buildSection(
             context,
@@ -339,6 +352,10 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
   Widget _buildQrSection(BuildContext context, DateroModel datero) {
     final theme = Theme.of(context);
     final qrData = _generateQrData(datero);
+
+    if (qrData.isEmpty || datero.id == null) {
+      return const SizedBox.shrink();
+    }
 
     return Card(
       elevation: 2,
