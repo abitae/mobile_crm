@@ -1,1 +1,1 @@
-**/*.jks
+# **/*.jks flutter build appbundle --release 
