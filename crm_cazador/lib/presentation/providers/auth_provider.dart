@@ -36,6 +36,7 @@ class AuthState {
 /// Provider de autenticación
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(AuthState()) {
+    // Inicializar de forma asíncrona sin bloquear el constructor
     _checkAuth();
   }
 
@@ -44,19 +45,39 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _checkAuth() async {
     state = state.copyWith(isLoading: true);
     try {
+      // Verificar si hay token almacenado
       final isAuth = await AuthService.isAuthenticated();
       if (isAuth) {
-        final user = await AuthService.getCurrentUser();
-        if (user != null) {
-          state = state.copyWith(
-            user: user,
-            isAuthenticated: true,
-            isLoading: false,
-          );
-        } else {
+        try {
+          // Intentar obtener el usuario actual
+          final user = await AuthService.getCurrentUser();
+          if (user != null) {
+            state = state.copyWith(
+              user: user,
+              isAuthenticated: true,
+              isLoading: false,
+            );
+          } else {
+            // Si no se puede obtener el usuario, limpiar tokens y marcar como no autenticado
+            await AuthService.logout();
+            state = state.copyWith(
+              isAuthenticated: false,
+              isLoading: false,
+            );
+          }
+        } catch (e) {
+          // Si falla al obtener el usuario (API no disponible, token inválido, etc.)
+          // Limpiar tokens y marcar como no autenticado
+          print('Error al obtener usuario: $e');
+          try {
+            await AuthService.logout();
+          } catch (_) {
+            // Ignorar errores al hacer logout
+          }
           state = state.copyWith(
             isAuthenticated: false,
             isLoading: false,
+            error: null, // No mostrar error al usuario en splash
           );
         }
       } else {
@@ -66,10 +87,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
       }
     } catch (e) {
+      // Error general, marcar como no autenticado
+      print('Error en _checkAuth: $e');
       state = state.copyWith(
         isAuthenticated: false,
         isLoading: false,
-        error: e.toString(),
+        error: null, // No mostrar error al usuario en splash
       );
     }
   }
@@ -128,9 +151,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authNotifierProvider = Provider<AuthNotifier>((ref) {
-  final notifier = AuthNotifier();
-  ref.onDispose(() => notifier.dispose());
-  return notifier;
+  try {
+    final notifier = AuthNotifier();
+    ref.onDispose(() {
+      try {
+        notifier.dispose();
+      } catch (e) {
+        print('Error al hacer dispose de AuthNotifier: $e');
+      }
+    });
+    return notifier;
+  } catch (e) {
+    print('Error al crear AuthNotifier: $e');
+    // Retornar un notifier básico en caso de error
+    return AuthNotifier();
+  }
 });
 
 final authProvider = Provider<AuthState>((ref) {

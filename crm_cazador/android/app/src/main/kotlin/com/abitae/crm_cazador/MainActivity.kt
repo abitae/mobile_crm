@@ -1,4 +1,4 @@
-package com.example.crm_cazador
+package com.abitae.crm_cazador
 
 import io.flutter.embedding.android.FlutterActivity
 

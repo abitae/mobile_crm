@@ -20,27 +20,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Esperar a que el AuthNotifier termine de verificar la autenticación
-    final authNotifier = ref.read(authNotifierProvider);
-    
-    // Esperar hasta que termine de cargar o máximo 3 segundos
-    int attempts = 0;
-    while (authNotifier.currentState.isLoading && attempts < 30) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      attempts++;
+    try {
+      // Esperar a que el AuthNotifier termine de verificar la autenticación
+      final authNotifier = ref.read(authNotifierProvider);
+      
+      // Esperar hasta que termine de cargar o máximo 5 segundos (50 intentos * 100ms)
+      int attempts = 0;
+      const maxAttempts = 50;
+      
+      while (authNotifier.currentState.isLoading && attempts < maxAttempts) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+        if (!mounted) return;
+      }
+      
+      // Si aún está cargando después del timeout, continuar de todas formas
+      if (authNotifier.currentState.isLoading) {
+        print('Timeout esperando autenticación, continuando...');
+      }
+      
+      // Esperar un poco más para asegurar que el estado se propague
+      await Future.delayed(const Duration(milliseconds: 300));
+      
       if (!mounted) return;
-    }
-    
-    // Esperar un poco más para asegurar que el estado se propague
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    if (!mounted) return;
 
-    final authState = ref.read(authProvider);
-    if (authState.isAuthenticated) {
-      context.go('/home');
-    } else {
-      context.go('/login');
+      final authState = ref.read(authProvider);
+      if (authState.isAuthenticated) {
+        if (mounted) {
+          context.go('/home');
+        }
+      } else {
+        if (mounted) {
+          context.go('/login');
+        }
+      }
+    } catch (e) {
+      // Si hay un error, ir a login de todas formas
+      print('Error en _checkAuth: $e');
+      if (mounted) {
+        context.go('/login');
+      }
     }
   }
 

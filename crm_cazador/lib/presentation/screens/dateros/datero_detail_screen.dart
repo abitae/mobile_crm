@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -34,15 +33,9 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
   final GlobalKey _qrKey = GlobalKey();
 
   String _generateQrData(DateroModel datero) {
-    final qrData = {
-      'id': datero.id,
-      'name': datero.name,
-      'email': datero.email,
-      'phone': datero.phone,
-      'dni': datero.dni,
-      'type': 'datero',
-    };
-    return jsonEncode(qrData);
+    final id = datero.id;
+    if (id == null) return '';
+    return 'https://crm.lotesenremate.pe/clients/registro-datero/$id';
   }
 
   Future<void> _shareQr(DateroModel datero) async {
@@ -68,9 +61,10 @@ class _DateroDetailScreenState extends ConsumerState<DateroDetailScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      CustomSnackbar.showError(
+      CustomSnackbar.show(
         context,
         'No se pudo compartir el código QR',
+        type: SnackbarType.error,
       );
     }
   }

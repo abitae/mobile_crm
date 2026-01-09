@@ -27,27 +27,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Configuración de rutas de la aplicación
 final routesProvider = Provider<GoRouter>((ref) {
-  final authNotifier = ref.watch(authNotifierProvider);
+  // Observar el estado de autenticación sin bloquear
   ref.watch(authProvider);
 
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
-      final isAuthenticated = authNotifier.currentState.isAuthenticated;
-      final isLogin = state.matchedLocation == '/login';
-      final isSplash = state.matchedLocation == '/splash';
+      try {
+        final authNotifier = ref.read(authNotifierProvider);
+        final isAuthenticated = authNotifier.currentState.isAuthenticated;
+        final isLogin = state.matchedLocation == '/login';
+        final isSplash = state.matchedLocation == '/splash';
 
-      if (isSplash) return null;
+        if (isSplash) return null;
 
-      if (!isAuthenticated && !isLogin) {
-        return '/login';
+        if (!isAuthenticated && !isLogin) {
+          return '/login';
+        }
+
+        if (isAuthenticated && isLogin) {
+          return '/home';
+        }
+
+        return null;
+      } catch (e) {
+        // Si hay un error, permitir navegación a splash o login
+        print('Error en redirect: $e');
+        final isSplash = state.matchedLocation == '/splash';
+        final isLogin = state.matchedLocation == '/login';
+        if (isSplash || isLogin) return null;
+        return '/splash';
       }
-
-      if (isAuthenticated && isLogin) {
-        return '/home';
-      }
-
-      return null;
     },
     routes: [
       GoRoute(
