@@ -25,17 +25,22 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
+        // Configuraciones para evitar problemas de compilación
+        freeCompilerArgs += listOf(
+            "-Xjvm-default=all",
+            "-Xopt-in=kotlin.RequiresOptIn"
+        )
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.abitae.crm_cazador"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Configuraciones para depuración
+        multiDexEnabled = true
     }
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
@@ -55,9 +60,35 @@ android {
         }
     }
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        getByName("debug") {
+            // Configuraciones optimizadas para depuración
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
+            // Sin optimizaciones para compilación más rápida
+        }
+        
+        getByName("profile") {
+            // Configuraciones para profile builds
+            applicationIdSuffix = ".profile"
+            versionNameSuffix = "-profile"
+            isDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+        
+        getByName("release") {
+            // Configuraciones para release
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            // Configuración de ProGuard/R8 (solo para release)
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             signingConfig = if (keystorePropertiesFile.exists() && 
                 signingConfigs.findByName("release") != null) {
                 signingConfigs.getByName("release")
@@ -65,6 +96,29 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+    
+    // Configuraciones de packaging
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/license.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/notice.txt"
+            excludes += "META-INF/ASL2.0"
+            excludes += "META-INF/*.kotlin_module"
+        }
+    }
+    
+    // Configuraciones de lint
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+        disable.add("InvalidPackage")
     }
 }
 

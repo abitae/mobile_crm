@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/theme/app_theme.dart';
@@ -11,22 +12,46 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('Construyendo App widget...');
+    if (kDebugMode) {
+      print('🔧 Construyendo App widget...');
+    }
     try {
-      print('Obteniendo router...');
+      if (kDebugMode) {
+        print('🔗 Obteniendo router...');
+      }
       final router = ref.watch(routesProvider);
-      print('Router obtenido correctamente');
+      if (kDebugMode) {
+        print('✅ Router obtenido correctamente');
+      }
 
       return MaterialApp.router(
         title: 'LER Cazador',
         theme: AppTheme.lightTheme,
         routerConfig: router,
         debugShowCheckedModeBanner: false,
+        // Configuraciones para depuración
+        builder: (context, child) {
+          // En modo debug, agregar overlay de información
+          if (kDebugMode) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: MediaQuery.of(context).textScaler.clamp(
+                  minScaleFactor: 0.8,
+                  maxScaleFactor: 1.2,
+                ),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          }
+          return child ?? const SizedBox.shrink();
+        },
       );
     } catch (e, stackTrace) {
       // Si hay un error al construir el router, mostrar un error widget
-      print('❌ Error al construir App: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        print('❌ Error al construir App: $e');
+        print('Stack trace: $stackTrace');
+      }
       
       return MaterialApp(
         title: 'LER Cazador',
@@ -65,20 +90,36 @@ class App extends ConsumerWidget {
 Future<void> initApp() async {
   try {
     // Inicializar almacenamiento primero (crítico)
+    if (kDebugMode) {
+      print('💾 Inicializando StorageService...');
+    }
     await StorageService.init();
+    if (kDebugMode) {
+      print('✅ StorageService inicializado');
+    }
   } catch (e) {
     // Si falla el almacenamiento, la app no puede funcionar
     // Pero intentamos continuar para que el usuario vea el error
-    print('Error al inicializar StorageService: $e');
+    if (kDebugMode) {
+      print('❌ Error al inicializar StorageService: $e');
+    }
   }
   
   try {
     // Inicializar API service (puede fallar si no hay conexión, pero no crítico para iniciar)
+    if (kDebugMode) {
+      print('🌐 Inicializando ApiService...');
+    }
     await ApiService.init();
+    if (kDebugMode) {
+      print('✅ ApiService inicializado');
+    }
   } catch (e) {
     // Si falla la API, la app puede iniciar pero no podrá hacer requests
     // Esto es aceptable para que el usuario pueda configurar la URL
-    print('Error al inicializar ApiService: $e');
+    if (kDebugMode) {
+      print('⚠️ Error al inicializar ApiService: $e');
+    }
   }
 }
 

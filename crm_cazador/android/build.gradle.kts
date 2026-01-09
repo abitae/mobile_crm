@@ -2,6 +2,8 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Repositorio adicional para dependencias
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
