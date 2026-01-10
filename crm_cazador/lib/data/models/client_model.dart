@@ -21,6 +21,7 @@ class ClientModel {
   final int? tasksCount;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? createType;
 
   ClientModel({
     required this.id,
@@ -44,6 +45,7 @@ class ClientModel {
     this.tasksCount,
     this.createdAt,
     this.updatedAt,
+    this.createType,
   });
 
   factory ClientModel.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,7 @@ class ClientModel {
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,
+      createType: json['create_type'] as String?,
     );
   }
 

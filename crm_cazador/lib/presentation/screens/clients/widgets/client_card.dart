@@ -30,8 +30,10 @@ class ClientCard extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.1),
-            width: 1,
+            color: _getCreateTypeColor(client.createType).withOpacity(
+              client.createType != null ? 0.6 : 0.1,
+            ),
+            width: client.createType != null ? 2 : 1,
           ),
         ),
         child: Material(
@@ -62,6 +64,10 @@ class ClientCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (client.createType != null) ...[
+                          const SizedBox(width: 6),
+                          _CreateTypeChip(createType: client.createType),
+                        ],
                         const SizedBox(width: 8),
                         _StatusChip(status: client.status),
                       ],
@@ -208,6 +214,32 @@ class ClientCard extends StatelessWidget {
     if (score >= 40) return AppColors.warning;
     return AppColors.error;
   }
+
+  Color _getCreateTypeColor(String? createType) {
+    if (createType == null) {
+      return AppColors.outline;
+    }
+    switch (createType.toLowerCase()) {
+      case 'datero':
+        return AppColors.primary; // Azul
+      case 'propio':
+        return AppColors.success; // Verde
+      default:
+        return AppColors.outline;
+    }
+  }
+
+  String _getCreateTypeLabel(String? createType) {
+    if (createType == null) return '';
+    switch (createType.toLowerCase()) {
+      case 'datero':
+        return 'Datero';
+      case 'propio':
+        return 'Propio';
+      default:
+        return createType;
+    }
+  }
 }
 
 class _StatusChip extends StatelessWidget {
@@ -271,3 +303,55 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+class _CreateTypeChip extends StatelessWidget {
+  final String? createType;
+
+  const _CreateTypeChip({required this.createType});
+
+  @override
+  Widget build(BuildContext context) {
+    if (createType == null) return const SizedBox.shrink();
+
+    final color = _getCreateTypeColor(createType);
+    final label = _getCreateTypeLabel(createType);
+
+    return Chip(
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+      ),
+      backgroundColor: color.withOpacity(0.15),
+      labelStyle: TextStyle(color: color),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      side: BorderSide(color: color.withOpacity(0.5), width: 1),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Color _getCreateTypeColor(String? createType) {
+    if (createType == null) {
+      return AppColors.outline;
+    }
+    switch (createType.toLowerCase()) {
+      case 'datero':
+        return AppColors.primary; // Azul
+      case 'propio':
+        return AppColors.success; // Verde
+      default:
+        return AppColors.outline;
+    }
+  }
+
+  String _getCreateTypeLabel(String? createType) {
+    if (createType == null) return '';
+    switch (createType.toLowerCase()) {
+      case 'datero':
+        return 'Datero';
+      case 'propio':
+        return 'Propio';
+      default:
+        return createType;
+    }
+  }
+}

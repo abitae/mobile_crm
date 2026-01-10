@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../projects/projects_list_screen.dart';
 import '../clients/clients_list_screen.dart';
@@ -6,16 +7,20 @@ import '../reservations/reservations_list_screen.dart';
 import '../dateros/dateros_list_screen.dart';
 import '../../widgets/common/ler_logo.dart';
 import '../../utils/animation_utils.dart';
+import '../../providers/client_provider.dart';
+import '../../providers/datero_provider.dart';
+import '../../providers/project_provider.dart';
+import '../../providers/reservation_provider.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late PageController _pageController;
   late AnimationController _animationController;
@@ -65,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             setState(() {
               _selectedIndex = index;
             });
+            _refreshDataForIndex(index);
           },
           children: [
             _buildHomeContent(),
@@ -87,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             curve: Curves.easeOut,
           );
           _animationController.forward(from: 0.0);
+          _refreshDataForIndex(index);
         },
         destinations: const [
           NavigationDestination(
@@ -117,6 +124,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  /// Refresca los datos según el índice de la pantalla seleccionada
+  void _refreshDataForIndex(int index) {
+    switch (index) {
+      case 0:
+        // Home - No hay datos que refrescar
+        break;
+      case 1:
+        // Clientes
+        ref.read(clientsNotifierProvider).loadClients(refresh: true);
+        break;
+      case 2:
+        // Dateros
+        ref.read(daterosNotifierProvider).loadDateros(refresh: true);
+        break;
+      case 3:
+        // Proyectos
+        ref.read(projectsNotifierProvider).loadProjects(refresh: true);
+        break;
+      case 4:
+        // Reservas
+        ref.read(reservationsNotifierProvider).loadReservations(refresh: true);
+        break;
+    }
   }
 
   Widget _buildHomeContent() {
