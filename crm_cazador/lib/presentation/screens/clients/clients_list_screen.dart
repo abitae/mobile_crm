@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/client_provider.dart';
@@ -31,6 +33,16 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     _searchController.addListener(() {
       setState(() {}); // Reconstruir para actualizar el suffixIcon
     });
+    
+    // Escuchar cambios en el estado del notifier
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(clientsNotifierProvider);
+      notifier.addListener((state) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    });
   }
 
   @override
@@ -54,162 +66,224 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clientsState = ref.watch(clientsNotifierProvider).currentState;
+    // Observar el notifier directamente para reactividad completa
+    final notifier = ref.watch(clientsNotifierProvider);
+    final clientsState = notifier.currentState;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clientes'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_outlined),
-            onPressed: () {
-              _showFilterBottomSheet(context);
-            },
-            tooltip: 'Filtros',
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Search bar with Material 3 styling
-          Padding(
+          // Search bar mejorado con animaciones
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: 'Buscar clientes',
-                      hintText: 'Nombre, documento, teléfono...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                // Actualizar búsqueda para mostrar todos los clientes
-                                ref.read(clientsNotifierProvider).setSearch(null);
-                                // Ocultar teclado
-                                FocusScope.of(context).unfocus();
-                              },
-                            )
-                          : null,
-                      filled: true,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Buscar clientes',
+                        hintText: 'Nombre, documento, teléfono...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  key: const ValueKey('clear'),
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    HapticFeedback.lightImpact();
+                                    _searchController.clear();
+                                    ref.read(clientsNotifierProvider).setSearch(null);
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                )
+                              : const SizedBox.shrink(key: ValueKey('empty')),
+                        ),
+                        filled: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        if (value.isEmpty || value.trim().isEmpty) {
+                          ref.read(clientsNotifierProvider).setSearch(null);
+                        }
+                      },
+                      onSubmitted: (value) {
+                        HapticFeedback.selectionClick();
+                        final searchText = value.trim();
+                        ref.read(clientsNotifierProvider).setSearch(
+                              searchText.isEmpty ? null : searchText,
+                            );
+                        FocusScope.of(context).unfocus();
+                      },
                     ),
-                    onChanged: (value) {
-                      // Actualizar inmediatamente si está vacío para mostrar todos los clientes
-                      if (value.isEmpty || value.trim().isEmpty) {
-                        ref.read(clientsNotifierProvider).setSearch(null);
-                      }
-                    },
-                    onSubmitted: (value) {
-                      final searchText = value.trim();
-                      ref.read(clientsNotifierProvider).setSearch(
-                            searchText.isEmpty ? null : searchText,
-                          );
-                      // Ocultar teclado después de buscar
-                      FocusScope.of(context).unfocus();
-                    },
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton.icon(
-                  onPressed: () {
-                    // Obtener el texto y limpiar espacios
-                    final searchText = _searchController.text.trim();
-                    
-                    // Aplicar búsqueda
-                    ref.read(clientsNotifierProvider).setSearch(
-                          searchText.isEmpty ? null : searchText,
-                        );
-                    
-                    // Ocultar teclado después de buscar
-                    FocusScope.of(context).unfocus();
-                  },
-                  icon: const Icon(Icons.search, size: 20),
-                  label: const Text('Buscar'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    minimumSize: const Size(0, 56), // Altura mínima para coincidir con el TextField
+                AnimatedScale(
+                  scale: _searchController.text.isNotEmpty ? 1.0 : 0.9,
+                  duration: const Duration(milliseconds: 200),
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      final searchText = _searchController.text.trim();
+                      ref.read(clientsNotifierProvider).setSearch(
+                            searchText.isEmpty ? null : searchText,
+                          );
+                      FocusScope.of(context).unfocus();
+                    },
+                    icon: const Icon(Icons.search, size: 20),
+                    label: const Text('Buscar'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      minimumSize: const Size(0, 56),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          // Active filters chips
-          if (clientsState.statusFilter != null ||
-              clientsState.typeFilter != null ||
-              clientsState.sourceFilter != null ||
-              clientsState.createTypeFilter != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  if (clientsState.statusFilter != null)
-                    FilterChip(
-                      label: Text(_getStatusLabel(clientsState.statusFilter!)),
-                      onSelected: (_) {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
+          // Indicador de resultados y filtros activos
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: (clientsState.createTypeFilter != null || clientsState.search != null)
+                ? Container(
+                    key: const ValueKey('filters'),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Row(
+                      children: [
+                        // Contador de resultados
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${clientsState.clients.length} ${clientsState.clients.length == 1 ? 'cliente' : 'clientes'}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Chips de filtros activos
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                if (clientsState.search != null)
+                                  _FilterChip(
+                                    label: 'Búsqueda: "${clientsState.search}"',
+                                    onDelete: () {
+                                      debugPrint('🗑️ [ClientsList] Eliminando filtro de búsqueda');
+                                      HapticFeedback.lightImpact();
+                                      _searchController.clear();
+                                      final notifier = ref.read(clientsNotifierProvider);
+                                      notifier.setSearch(null);
+                                    },
+                                  ),
+                                if (clientsState.createTypeFilter != null)
+                                  _FilterChip(
+                                    label: _getCreateTypeLabel(clientsState.createTypeFilter!),
+                                    onDelete: () {
+                                      debugPrint('🗑️ [ClientsList] Eliminando filtro createType');
+                                      HapticFeedback.lightImpact();
+                                      final notifier = ref.read(clientsNotifierProvider);
+                                      notifier.setFilters(createType: null);
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  if (clientsState.typeFilter != null)
-                    FilterChip(
-                      label: Text(_getTypeLabel(clientsState.typeFilter!)),
-                      onSelected: (_) {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              type: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              type: null,
-                            );
-                      },
+                  )
+                : const SizedBox.shrink(key: ValueKey('no-filters')),
+          ),
+          // Filtro de tipo de creación mejorado con animaciones
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Builder(
+              builder: (context) {
+                final currentFilter = clientsState.createTypeFilter;
+                final theme = Theme.of(context);
+                
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Todos',
+                        isSelected: currentFilter == null,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          final notifier = ref.read(clientsNotifierProvider);
+                          debugPrint('🔘 [ClientsList] Filtro seleccionado: null (Todos)');
+                          notifier.setFilters(createType: null);
+                        },
+                        theme: theme,
+                      ),
                     ),
-                  if (clientsState.sourceFilter != null)
-                    FilterChip(
-                      label: Text(_getSourceLabel(clientsState.sourceFilter!)),
-                      onSelected: (_) {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              source: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              source: null,
-                            );
-                      },
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Propio',
+                        isSelected: currentFilter == 'propio',
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          final notifier = ref.read(clientsNotifierProvider);
+                          debugPrint('🔘 [ClientsList] Filtro seleccionado: propio');
+                          notifier.setFilters(createType: 'propio');
+                        },
+                        theme: theme,
+                      ),
                     ),
-                  if (clientsState.createTypeFilter != null)
-                    FilterChip(
-                      label: Text(_getCreateTypeLabel(clientsState.createTypeFilter!)),
-                      onSelected: (_) {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              createType: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(clientsNotifierProvider).setFilters(
-                              createType: null,
-                            );
-                      },
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Dateado',
+                        isSelected: currentFilter == 'datero',
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          final notifier = ref.read(clientsNotifierProvider);
+                          debugPrint('🔘 [ClientsList] Filtro seleccionado: datero');
+                          notifier.setFilters(createType: 'datero');
+                        },
+                        theme: theme,
+                      ),
                     ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -231,62 +305,6 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     );
   }
 
-  void _showFilterBottomSheet(BuildContext context) {
-    final clientsState = ref.read(clientsNotifierProvider).currentState;
-    final optionsAsync = ref.watch(clientOptionsProvider);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _FilterBottomSheet(
-        clientsState: clientsState,
-        optionsAsync: optionsAsync,
-        onApply: (status, type, source, createType) {
-          ref.read(clientsNotifierProvider).setFilters(
-                status: status,
-                type: type,
-                source: source,
-                createType: createType,
-              );
-        },
-        onClear: () {
-          ref.read(clientsNotifierProvider).clearFilters();
-        },
-      ),
-    );
-  }
-
-  String _getStatusLabel(String status) {
-    final labels = {
-      'nuevo': 'Nuevo',
-      'contacto_inicial': 'Contacto Inicial',
-      'en_seguimiento': 'En Seguimiento',
-      'cierre': 'Cierre',
-      'perdido': 'Perdido',
-    };
-    return labels[status] ?? status;
-  }
-
-  String _getTypeLabel(String type) {
-    final labels = {
-      'inversor': 'Inversor',
-      'comprador': 'Comprador',
-      'empresa': 'Empresa',
-      'constructor': 'Constructor',
-    };
-    return labels[type] ?? type;
-  }
-
-  String _getSourceLabel(String source) {
-    final labels = {
-      'redes_sociales': 'Redes Sociales',
-      'ferias': 'Ferias',
-      'referidos': 'Referidos',
-      'formulario_web': 'Formulario Web',
-      'publicidad': 'Publicidad',
-    };
-    return labels[source] ?? source;
-  }
 
   String _getCreateTypeLabel(String createType) {
     final labels = {
@@ -322,273 +340,275 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: state.clients.length + (state.isLoadingMore ? 1 : 0),
-      cacheExtent: 500, // Optimizar caché de scroll
-      itemBuilder: (context, index) {
-        if (index >= state.clients.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final client = state.clients[index];
-        return StaggerAnimation(
-          index: index,
-          child: ClientCard(
-            key: ValueKey('client_${client.id}'), // Key única para evitar duplicados en renderizado
-            client: client,
-            onTap: () {
-              context.push('/clients/${client.id}');
-            },
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            )),
+            child: child,
           ),
         );
       },
+      child: ListView.builder(
+        key: ValueKey('clients_list_${state.createTypeFilter}_${state.search}'),
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: state.clients.length + (state.isLoadingMore ? 1 : 0),
+        cacheExtent: 500,
+        itemBuilder: (context, index) {
+          if (index >= state.clients.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final client = state.clients[index];
+          return StaggerAnimation(
+            index: index,
+            child: ClientCard(
+              key: ValueKey('client_${client.id}'),
+              client: client,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.push('/clients/${client.id}');
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Widget para el bottom sheet de filtros
-class _FilterBottomSheet extends ConsumerStatefulWidget {
-  final ClientsState clientsState;
-  final AsyncValue<ClientOptions> optionsAsync;
-  final void Function(String? status, String? type, String? source, String? createType) onApply;
-  final VoidCallback onClear;
+/// Botón de filtro animado con feedback visual mejorado
+class _AnimatedFilterButton extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final ThemeData theme;
 
-  const _FilterBottomSheet({
-    required this.clientsState,
-    required this.optionsAsync,
-    required this.onApply,
-    required this.onClear,
+  const _AnimatedFilterButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.theme,
   });
 
   @override
-  ConsumerState<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+  State<_AnimatedFilterButton> createState() => _AnimatedFilterButtonState();
 }
 
-class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
-  late String? _selectedStatus;
-  late String? _selectedType;
-  late String? _selectedSource;
-  late String? _selectedCreateType;
+class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = widget.clientsState.statusFilter;
-    _selectedType = widget.clientsState.typeFilter;
-    _selectedSource = widget.clientsState.sourceFilter;
-    _selectedCreateType = widget.clientsState.createTypeFilter;
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    _controller.reverse();
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+    _controller.reverse();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? widget.theme.colorScheme.primary
+                    : widget.theme.colorScheme.surface,
+                border: Border.all(
+                  color: widget.isSelected
+                      ? widget.theme.colorScheme.primary
+                      : widget.theme.colorScheme.outline.withOpacity(0.3),
+                  width: widget.isSelected ? 2 : 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: widget.isSelected
+                    ? [
+                        BoxShadow(
+                          color: widget.theme.colorScheme.primary.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: widget.isSelected
+                        ? Icon(
+                            Icons.check_circle,
+                            key: const ValueKey('selected'),
+                            size: 18,
+                            color: widget.theme.colorScheme.onPrimary,
+                          )
+                        : Icon(
+                            Icons.radio_button_unchecked,
+                            key: const ValueKey('unselected'),
+                            size: 18,
+                            color: widget.theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                  ),
+                  const SizedBox(width: 6),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: widget.isSelected
+                          ? widget.theme.colorScheme.onPrimary
+                          : widget.theme.colorScheme.onSurface,
+                      fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    child: Text(widget.label),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
-      child: widget.optionsAsync.when(
-        data: (options) => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Filtros',
-                  style: Theme.of(context).textTheme.titleLarge,
+    );
+  }
+}
+
+/// Chip para mostrar filtros activos con eliminación rápida
+class _FilterChip extends StatefulWidget {
+  final String label;
+  final VoidCallback onDelete;
+
+  const _FilterChip({
+    required this.label,
+    required this.onDelete,
+  });
+
+  @override
+  State<_FilterChip> createState() => _FilterChipState();
+}
+
+class _FilterChipState extends State<_FilterChip> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    HapticFeedback.lightImpact();
+    widget.onDelete();
+    _controller.forward().then((_) {
+      _controller.reverse();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        _handleTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              child: Chip(
+                label: Text(
+                  widget.label,
+                  style: const TextStyle(fontSize: 12),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
+                deleteIcon: const Icon(Icons.close, size: 18),
+                onDeleted: () {
+                  HapticFeedback.lightImpact();
+                  widget.onDelete();
+                },
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                labelStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Filtro de Estado con chips
-            Text(
-              'Estado',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Todos'),
-                  selected: _selectedStatus == null,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedStatus = null;
-                    });
-                  },
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
                 ),
-                ...options.statusesList.map((status) => ChoiceChip(
-                      label: Text(options.getStatusLabel(status)),
-                      selected: _selectedStatus == status,
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedStatus = _selectedStatus == status ? null : status;
-                        });
-                      },
-                    )),
-              ],
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
-            const SizedBox(height: 20),
-            // Filtro de Tipo con chips
-            Text(
-              'Tipo de Cliente',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Todos'),
-                  selected: _selectedType == null,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedType = null;
-                    });
-                  },
-                ),
-                ...options.clientTypesList.map((type) => ChoiceChip(
-                      label: Text(options.getClientTypeLabel(type)),
-                      selected: _selectedType == type,
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedType = _selectedType == type ? null : type;
-                        });
-                      },
-                    )),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Filtro de Origen con chips
-            Text(
-              'Origen',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Todos'),
-                  selected: _selectedSource == null,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedSource = null;
-                    });
-                  },
-                ),
-                ...options.sourcesList.map((source) => ChoiceChip(
-                      label: Text(options.getSourceLabel(source)),
-                      selected: _selectedSource == source,
-                      onSelected: (_) {
-                        setState(() {
-                          _selectedSource = _selectedSource == source ? null : source;
-                        });
-                      },
-                    )),
-              ],
-            ),
-            const SizedBox(height: 20),
-            // Filtro de Tipo de Creación con chips
-            Text(
-              'Tipo de Creación',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Todos'),
-                  selected: _selectedCreateType == null,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedCreateType = null;
-                    });
-                  },
-                ),
-                ChoiceChip(
-                  label: const Text('Propio'),
-                  selected: _selectedCreateType == 'propio',
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedCreateType = _selectedCreateType == 'propio' ? null : 'propio';
-                    });
-                  },
-                ),
-                ChoiceChip(
-                  label: const Text('Dateado'),
-                  selected: _selectedCreateType == 'datero',
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedCreateType = _selectedCreateType == 'datero' ? null : 'datero';
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      widget.onClear();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Limpiar'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      widget.onApply(_selectedStatus, _selectedType, _selectedSource, _selectedCreateType);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Aplicar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Error al cargar opciones: $error'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

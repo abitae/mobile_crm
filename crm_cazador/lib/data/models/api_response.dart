@@ -1,3 +1,5 @@
+import '../../core/logging/app_logger.dart';
+
 /// Modelo genérico para respuestas de la API
 class ApiResponse<T> {
   final T? data;
@@ -35,8 +37,6 @@ class ApiResponse<T> {
     };
   }
 }
-
-import '../../core/logging/app_logger.dart';
 
 /// Modelo de link de paginación
 class PaginationLink {
@@ -84,7 +84,27 @@ class PaginationMeta {
   });
 
   factory PaginationMeta.fromJson(Map<String, dynamic> json) {
-    final links = json['links'] as List<dynamic>?;
+    // Verificar que links sea una List antes de hacer el cast
+    final linksValue = json['links'];
+    List<PaginationLink>? links;
+    
+    if (linksValue != null) {
+      if (linksValue is List<dynamic>) {
+        links = linksValue
+            .map((link) {
+              if (link is Map<String, dynamic>) {
+                return PaginationLink.fromJson(link);
+              }
+              return null;
+            })
+            .whereType<PaginationLink>()
+            .toList();
+      } else {
+        // Si links no es una lista, loguear pero continuar
+        AppLogger.debug('⚠️ [PaginationMeta] links no es una List, tipo: ${linksValue.runtimeType}', tag: 'PaginationMeta');
+      }
+    }
+    
     return PaginationMeta(
       currentPage: json['current_page'] as int? ?? 1,
       lastPage: json['last_page'] as int? ?? 1,
@@ -94,7 +114,7 @@ class PaginationMeta {
       to: json['to'] as int?,
       hasNextPage: json['has_next'] as bool? ?? json['has_next_page'] as bool?,
       hasPreviousPage: json['has_previous'] as bool? ?? json['has_previous_page'] as bool?,
-      links: links?.map((link) => PaginationLink.fromJson(link as Map<String, dynamic>)).toList(),
+      links: links,
     );
   }
 
@@ -133,34 +153,50 @@ class PaginatedResponse<T> {
     Map<String, dynamic> json,
     T Function(dynamic) fromJsonT,
   ) {
+    AppLogger.debug('📥 [PaginatedResponse] Iniciando parseo', tag: 'PaginatedResponse', data: {
+      'json_keys': json.keys.toList(),
+      'has_data': json.containsKey('data'),
+      'has_pagination': json.containsKey('pagination'),
+    });
+    
     final dataObj = json['data'];
     PaginationMeta? meta;
     Map<String, dynamic>? pagination;
     List<dynamic>? items;
     
+    AppLogger.debug('📊 [PaginatedResponse] Tipo de dataObj: ${dataObj.runtimeType}', tag: 'PaginatedResponse');
+    
     // Intentar extraer paginación y datos según diferentes estructuras
     if (dataObj is Map<String, dynamic>) {
+      AppLogger.debug('📦 [PaginatedResponse] dataObj es Map, claves: ${dataObj.keys.toList()}', tag: 'PaginatedResponse');
+      
       // Estructura con objeto data que contiene items y pagination
       if (dataObj.containsKey('clients')) {
         items = dataObj['clients'] as List<dynamic>? ?? [];
         pagination = dataObj['pagination'] as Map<String, dynamic>?;
+        AppLogger.debug('✅ [PaginatedResponse] Items encontrados en clients: ${items.length}', tag: 'PaginatedResponse');
       } else if (dataObj.containsKey('projects')) {
         items = dataObj['projects'] as List<dynamic>? ?? [];
         pagination = dataObj['pagination'] as Map<String, dynamic>?;
+        AppLogger.debug('✅ [PaginatedResponse] Items encontrados en projects: ${items.length}', tag: 'PaginatedResponse');
       } else if (dataObj.containsKey('reservations')) {
         items = dataObj['reservations'] as List<dynamic>? ?? [];
         pagination = dataObj['pagination'] as Map<String, dynamic>?;
+        AppLogger.debug('✅ [PaginatedResponse] Items encontrados en reservations: ${items.length}', tag: 'PaginatedResponse');
       } else if (dataObj.containsKey('dateros')) {
         items = dataObj['dateros'] as List<dynamic>? ?? [];
         pagination = dataObj['pagination'] as Map<String, dynamic>?;
+        AppLogger.debug('✅ [PaginatedResponse] Items encontrados en dateros: ${items.length}', tag: 'PaginatedResponse');
       } else if (dataObj.containsKey('units')) {
         items = dataObj['units'] as List<dynamic>? ?? [];
         pagination = dataObj['pagination'] as Map<String, dynamic>?;
+        AppLogger.debug('✅ [PaginatedResponse] Items encontrados en units: ${items.length}', tag: 'PaginatedResponse');
       }
     } else if (dataObj is List<dynamic>) {
       // Estructura directa con array de datos
       items = dataObj;
       pagination = json['pagination'] as Map<String, dynamic>?;
+      AppLogger.debug('✅ [PaginatedResponse] Items encontrados directamente en data: ${items.length}', tag: 'PaginatedResponse');
     }
     
     // Si no se encontró items, intentar usar data directamente
@@ -168,6 +204,7 @@ class PaginatedResponse<T> {
     final dataValue = json['data'];
     if (items == null && dataValue is List<dynamic>) {
       items = dataValue;
+      AppLogger.debug('✅ [PaginatedResponse] Items encontrados en dataValue: ${items.length}', tag: 'PaginatedResponse');
     }
     pagination ??= json['pagination'] as Map<String, dynamic>?;
     
@@ -191,7 +228,7 @@ class PaginatedResponse<T> {
         for (final entry in dataObj.entries) {
           if (entry.value is List<dynamic>) {
             items = entry.value as List<dynamic>;
-            AppLogger.debug('Items encontrados en clave: ${entry.key}', tag: 'PaginatedResponse');
+            AppLogger.debug('✅ [PaginatedResponse] Items encontrados en clave: ${entry.key} (${items.length} items)', tag: 'PaginatedResponse');
             break;
           }
         }
@@ -206,13 +243,41 @@ class PaginatedResponse<T> {
             'Tipo de data: ${dataObj.runtimeType}. '
             'Contenido de data: ${dataObj is Map ? (dataObj as Map).keys : 'N/A'}';
         
-        AppLogger.error(errorMsg, tag: 'PaginatedResponse', data: {'json': json});
+        AppLogger.error(errorMsg, tag: 'PaginatedResponse', data: {
+          'json_keys': json.keys.toList(),
+          'data_type': dataObj.runtimeType.toString(),
+          'data_content': dataObj is Map ? (dataObj as Map<String, dynamic>).keys.toList() : dataObj.toString(),
+          'full_json': json,
+        });
         throw FormatException(errorMsg);
       }
     }
     
+    // Parsear items con manejo de errores individual
+    List<T> parsedItems = [];
+    try {
+      parsedItems = items.map((item) {
+        try {
+          return fromJsonT(item);
+        } catch (e, stackTrace) {
+          AppLogger.error('❌ [PaginatedResponse] Error al parsear item individual', tag: 'PaginatedResponse', 
+            error: e, stackTrace: stackTrace, data: {'item': item});
+          rethrow;
+        }
+      }).toList();
+      
+      AppLogger.debug('✅ [PaginatedResponse] ${parsedItems.length} items parseados exitosamente', tag: 'PaginatedResponse');
+    } catch (e, stackTrace) {
+      AppLogger.error('❌ [PaginatedResponse] Error al parsear lista de items', tag: 'PaginatedResponse', 
+        error: e, stackTrace: stackTrace, data: {
+          'items_count': items.length,
+          'first_item': items.isNotEmpty ? items.first : null,
+        });
+      rethrow;
+    }
+    
     return PaginatedResponse<T>(
-      data: items.map((item) => fromJsonT(item)).toList(),
+      data: parsedItems,
       currentPage: meta?.currentPage ?? pagination?['current_page'] as int? ?? 1,
       totalPages: meta?.lastPage ?? pagination?['last_page'] as int? ?? 1,
       totalItems: meta?.total ?? pagination?['total'] as int? ?? 0,

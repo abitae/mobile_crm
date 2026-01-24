@@ -37,8 +37,12 @@ class ClientService {
       if (source != null && source.isNotEmpty) {
         queryParams['source'] = source;
       }
+      // Manejar createType: si es null, no enviar el parámetro (mostrar todos)
       if (createType != null && createType.isNotEmpty) {
         queryParams['create_type'] = createType;
+        AppLogger.debug('🔍 [ClientService] Filtro create_type aplicado: $createType', tag: 'ClientService');
+      } else {
+        AppLogger.debug('🔍 [ClientService] Filtro create_type: null (mostrar todos)', tag: 'ClientService');
       }
 
       AppLogger.apiRequest('GET', '/cazador/clients', queryParams: queryParams);
@@ -48,21 +52,110 @@ class ClientService {
         queryParameters: queryParams,
       );
 
-      AppLogger.apiResponse('GET', '/cazador/clients', response.statusCode ?? 200);
+      final statusCode = response.statusCode ?? 200;
+      AppLogger.apiResponse('GET', '/cazador/clients', statusCode);
       
-      final responseData = response.data as Map<String, dynamic>?;
-      
-      if (responseData == null) {
-        AppLogger.error('Respuesta sin datos', tag: 'ClientService');
-        throw ApiException('Respuesta vacía del servidor');
+      // Manejar diferentes formatos de respuesta de error
+      dynamic responseData;
+      try {
+        responseData = response.data;
+      } catch (e) {
+        AppLogger.error('Error al obtener datos de respuesta', tag: 'ClientService', error: e);
+        throw ApiException('Error al procesar respuesta del servidor');
       }
       
-      // Log de la estructura recibida para debugging
-      AppLogger.debug('Estructura de respuesta recibida', tag: 'ClientService', data: {
+      // Verificar si hay un error de autenticación u otro error HTTP
+      if (statusCode == 401) {
+        String? errorMessage;
+        if (responseData is Map<String, dynamic>) {
+          errorMessage = responseData['message'] as String?;
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        }
+        throw ApiException(errorMessage ?? 'Usuario no autenticado');
+      }
+      
+      if (statusCode >= 400) {
+        String? errorMessage;
+        if (responseData is Map<String, dynamic>) {
+          errorMessage = responseData['message'] as String?;
+        } else if (responseData is String) {
+          errorMessage = responseData;
+        }
+        throw ApiException(errorMessage ?? 'Error al obtener clientes (${statusCode})');
+      }
+      
+      // Verificar que responseData sea un Map
+      if (responseData is! Map<String, dynamic>) {
+        AppLogger.error('Respuesta en formato inesperado', tag: 'ClientService', data: {
+          'data_type': responseData.runtimeType.toString(),
+          'data_value': responseData.toString(),
+        });
+        throw ApiException('Formato de respuesta inválido');
+      }
+      
+      // Verificar si la respuesta indica un error (aunque el statusCode sea 200)
+      if (responseData.containsKey('message') && !responseData.containsKey('data')) {
+        final errorMessage = responseData['message'] as String?;
+        if (errorMessage != null) {
+          final lowerMessage = errorMessage.toLowerCase();
+          if (lowerMessage.contains('unauthenticated') || 
+              lowerMessage.contains('no autenticado') ||
+              lowerMessage.contains('token')) {
+            throw ApiException(errorMessage);
+          }
+        }
+      }
+      
+      // Log detallado de la estructura recibida para debugging
+      AppLogger.debug('📥 [ClientService] Respuesta recibida del endpoint', tag: 'ClientService', data: {
         'keys': responseData.keys.toList(),
         'has_data': responseData.containsKey('data'),
         'data_type': responseData['data']?.runtimeType.toString(),
+        'success': responseData['success'],
+        'message': responseData['message'],
       });
+      
+      // Verificar estructura de data
+      final dataObj = responseData['data'];
+      if (dataObj != null) {
+        if (dataObj is Map<String, dynamic>) {
+          final clientsList = dataObj['clients'];
+          final paginationObj = dataObj['pagination'];
+          
+          AppLogger.debug('📊 [ClientService] Estructura de data', tag: 'ClientService', data: {
+            'data_keys': dataObj.keys.toList(),
+            'has_clients': dataObj.containsKey('clients'),
+            'clients_type': clientsList?.runtimeType.toString(),
+            'clients_count': clientsList is List ? (clientsList as List).length : null,
+            'has_pagination': dataObj.containsKey('pagination'),
+            'pagination_type': paginationObj?.runtimeType.toString(),
+            'pagination_keys': paginationObj is Map ? (paginationObj as Map).keys.toList() : null,
+          });
+          
+          // Log del primer cliente si existe para verificar estructura
+          if (clientsList is List && clientsList.isNotEmpty) {
+            final firstClient = clientsList.first;
+            AppLogger.debug('👤 [ClientService] Primer cliente recibido', tag: 'ClientService', data: {
+              'first_client_keys': firstClient is Map ? (firstClient as Map).keys.toList() : 'No es Map',
+              'first_client_id': firstClient is Map ? (firstClient as Map)['id'] : null,
+              'first_client_name': firstClient is Map ? (firstClient as Map)['name'] : null,
+            });
+          } else {
+            AppLogger.debug('⚠️ [ClientService] Lista de clientes vacía o no es una lista', tag: 'ClientService', data: {
+              'clients_list_type': clientsList?.runtimeType.toString(),
+              'clients_list_value': clientsList?.toString(),
+            });
+          }
+        } else {
+          AppLogger.debug('⚠️ [ClientService] data no es un Map', tag: 'ClientService', data: {
+            'data_type': dataObj.runtimeType.toString(),
+            'data_value': dataObj.toString(),
+          });
+        }
+      } else {
+        AppLogger.debug('⚠️ [ClientService] No hay campo data en la respuesta', tag: 'ClientService');
+      }
       
       try {
         return PaginatedResponse.fromJson(

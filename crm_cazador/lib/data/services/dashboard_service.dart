@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Modelo de estadísticas del dashboard
 class DashboardStats {
@@ -114,16 +115,33 @@ class DashboardService {
   /// Obtener estadísticas del dashboard
   static Future<DashboardStats> getStats() async {
     try {
+      AppLogger.debug('📤 [DashboardService] Solicitando estadísticas del dashboard');
       final response = await ApiService.get('/cazador/dashboard/stats');
+      
+      AppLogger.debug('📥 [DashboardService] Respuesta recibida: ${response.statusCode}');
       
       final responseData = response.data as Map<String, dynamic>?;
       
       if (responseData == null) {
+        AppLogger.error('Respuesta sin datos', tag: 'DashboardService');
         throw ApiException('Respuesta inválida del servidor');
       }
       
-      return DashboardStats.fromJson(responseData);
-    } on DioException catch (e) {
+      AppLogger.debug('📊 [DashboardService] Estructura de respuesta', tag: 'DashboardService', data: {
+        'keys': responseData.keys.toList(),
+        'has_data': responseData.containsKey('data'),
+      });
+      
+      final stats = DashboardStats.fromJson(responseData);
+      AppLogger.debug('✅ [DashboardService] Estadísticas parseadas exitosamente');
+      return stats;
+    } on DioException catch (e, stackTrace) {
+      AppLogger.error('❌ [DashboardService] Error de red', tag: 'DashboardService', 
+        error: e, stackTrace: stackTrace, data: {
+          'status_code': e.response?.statusCode,
+          'response_data': e.response?.data,
+        });
+      
       final responseData = e.response?.data;
       String? errorMessage;
       
@@ -142,7 +160,9 @@ class DashboardService {
       throw ApiException(
         errorMessage ?? 'Error al obtener estadísticas: ${e.message}',
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('❌ [DashboardService] Error inesperado', tag: 'DashboardService', 
+        error: e, stackTrace: stackTrace);
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
     }

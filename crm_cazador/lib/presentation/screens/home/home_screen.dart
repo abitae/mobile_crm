@@ -6,7 +6,6 @@ import '../projects/projects_list_screen.dart';
 import '../clients/clients_list_screen.dart';
 import '../reservations/reservations_list_screen.dart';
 import '../dateros/dateros_list_screen.dart';
-import '../../widgets/common/ler_logo.dart';
 import '../../utils/animation_utils.dart';
 import '../../providers/client_provider.dart';
 import '../../providers/datero_provider.dart';
@@ -171,54 +170,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Hero section mejorado
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.secondaryContainer,
-                    ],
-                  ),
-                ),
-                padding: const EdgeInsets.all(40.0),
-                child: Column(
-                  children: [
-                    LerLogo(
-                      height: 100,
-                      showTagline: false,
-                      appName: 'LER Cazador',
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Bienvenido',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Gestiona clientes y proyectos de forma eficiente',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onPrimaryContainer.withOpacity(0.9),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             // Dashboard de estadísticas
             _DashboardWidget(),
           ],

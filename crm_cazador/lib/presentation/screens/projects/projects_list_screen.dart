@@ -53,7 +53,7 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final projectsState = ref.watch(projectsNotifierProvider).currentState;
+    final projectsState = ref.watch(projectsProvider);
 
     return Scaffold(
       appBar: AppBar(

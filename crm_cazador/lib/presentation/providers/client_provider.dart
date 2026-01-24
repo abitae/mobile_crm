@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:state_notifier/state_notifier.dart';
 import '../../../data/services/client_service.dart';
@@ -81,7 +82,11 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
   ClientsState get currentState => state;
 
   /// Cargar clientes
-  Future<void> loadClients({bool refresh = false}) async {
+  Future<void> loadClients({
+    bool refresh = false,
+    String? createType,
+    String? search,
+  }) async {
     if (refresh) {
       state = state.copyWith(isLoading: true, error: null, currentPage: 1);
     } else {
@@ -89,14 +94,20 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
     }
 
     try {
+      // Usar los parámetros pasados directamente, o los del estado si no se proporcionan
+      final filterCreateType = createType ?? state.createTypeFilter;
+      final filterSearch = search ?? state.search;
+      
+      debugPrint('📥 [ClientsNotifier] loadClients - search: $filterSearch, createType: $filterCreateType');
+      
       final response = await ClientService.getClients(
         page: refresh ? 1 : state.currentPage,
         perPage: 15,
-        search: state.search,
+        search: filterSearch,
         status: state.statusFilter,
         type: state.typeFilter,
         source: state.sourceFilter,
-        createType: state.createTypeFilter,
+        createType: filterCreateType,
       );
 
       // Prevenir duplicados: si no es refresh, filtrar clientes que ya existen
@@ -117,6 +128,9 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         isLoading: false,
         error: null,
       );
+      
+      // Debug: verificar que el estado se actualizó
+      debugPrint('✅ [ClientsNotifier] Estado actualizado: ${newClients.length} clientes');
     } on ApiException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -173,8 +187,10 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
 
   /// Aplicar búsqueda
   void setSearch(String? search) {
+    debugPrint('🔍 [ClientsNotifier] setSearch - search: $search');
     state = state.copyWith(search: search, currentPage: 1);
-    loadClients(refresh: true);
+    // Pasar el search directamente para evitar problemas de timing
+    loadClients(refresh: true, search: search);
   }
 
   /// Aplicar filtros
@@ -184,6 +200,8 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
     String? source,
     String? createType,
   }) {
+    debugPrint('🔧 [ClientsNotifier] Aplicando filtros - createType: $createType');
+    
     state = state.copyWith(
       statusFilter: status,
       typeFilter: type,
@@ -191,7 +209,9 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
       createTypeFilter: createType,
       currentPage: 1,
     );
-    loadClients(refresh: true);
+    
+    // Forzar refresh siempre, pasando el createType directamente para evitar problemas de timing
+    loadClients(refresh: true, createType: createType);
   }
 
   /// Limpiar filtros
@@ -221,14 +241,9 @@ final clientsNotifierProvider = Provider<ClientsNotifier>((ref) {
 });
 
 /// Provider global de clientes (estado) - reactivo
-/// Observa el notifier y accede al estado actual
-/// Nota: Para que sea completamente reactivo, los widgets deben observar
-/// directamente clientsNotifierProvider y acceder a currentState
+/// Observa el notifier y accede al estado actual directamente
 final clientsProvider = Provider<ClientsState>((ref) {
-  // Observar el notifier para que el provider se actualice cuando cambie
-  ref.watch(clientsNotifierProvider);
-  // Retornar el estado actual
-  return ref.read(clientsNotifierProvider).currentState;
+  return ref.watch(clientsNotifierProvider).currentState;
 });
 
 /// Provider para opciones de formularios
