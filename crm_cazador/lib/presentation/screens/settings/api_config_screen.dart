@@ -47,17 +47,31 @@ class _ApiConfigScreenState extends State<ApiConfigScreen> {
     });
 
     try {
-      // TODO: Implementar test de conexión real
-      await Future.delayed(const Duration(seconds: 1));
+      final isValid = await ApiConfigService.testConnection(url);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conexión exitosa')),
-        );
+        if (isValid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Conexión exitosa'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo conectar al servidor. Verifica la URL.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de conexión: $e')),
+          SnackBar(
+            content: Text('Error de conexión: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {

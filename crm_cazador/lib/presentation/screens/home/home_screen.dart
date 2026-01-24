@@ -12,6 +12,7 @@ import '../../providers/client_provider.dart';
 import '../../providers/datero_provider.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/reservation_provider.dart';
+import '../../providers/dashboard_provider.dart';
 
 /// Pantalla principal (Home) con Material 3 y NavigationBar
 class HomeScreen extends ConsumerStatefulWidget {
@@ -138,11 +139,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
   void _refreshDataForIndex(int index) {
     switch (index) {
       case 0:
-        // Home - Refrescar todos los datos del dashboard para mantenerlo actualizado
-        ref.read(clientsNotifierProvider).loadClients(refresh: true);
-        ref.read(daterosNotifierProvider).loadDateros(refresh: true);
-        ref.read(projectsNotifierProvider).loadProjects(refresh: true);
-        ref.read(reservationsNotifierProvider).loadReservations(refresh: true);
+        // Home - Usar endpoint unificado de dashboard
+        ref.read(dashboardNotifierProvider).refresh();
         break;
       case 1:
         // Clientes
@@ -238,53 +236,90 @@ class _DashboardWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final clientsState = ref.watch(clientsNotifierProvider).currentState;
-    final daterosState = ref.watch(daterosNotifierProvider).currentState;
-    final projectsState = ref.watch(projectsNotifierProvider).currentState;
-    final reservationsState = ref.watch(reservationsNotifierProvider).currentState;
+    final dashboardState = ref.watch(dashboardProvider);
+
+    // Si hay error, mostrar mensaje
+    if (dashboardState.error != null && dashboardState.stats == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Resumen',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Error al cargar estadísticas: ${dashboardState.error}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.error,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final stats = dashboardState.stats;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Resumen',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Resumen',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (dashboardState.isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
         ),
         const SizedBox(height: 16),
         Column(
           children: [
             _DashboardCard(
               title: 'Clientes',
-              value: clientsState.clients.length.toString(),
+              value: stats?.clients.total.toString() ?? '0',
               iconPath: 'assets/images/icon_clients.svg',
               color: colorScheme.primary,
-              isLoading: clientsState.isLoading,
+              isLoading: dashboardState.isLoading && stats == null,
             ),
             const SizedBox(height: 12),
             _DashboardCard(
               title: 'Dateros',
-              value: daterosState.dateros.length.toString(),
+              value: stats?.dateros.total.toString() ?? '0',
               iconPath: 'assets/images/icon_dateros.svg',
               color: colorScheme.secondary,
-              isLoading: daterosState.isLoading,
+              isLoading: dashboardState.isLoading && stats == null,
             ),
             const SizedBox(height: 12),
             _DashboardCard(
               title: 'Proyectos',
-              value: projectsState.projects.length.toString(),
+              value: stats?.projects.total.toString() ?? '0',
               iconPath: 'assets/images/icon_projects.svg',
               color: colorScheme.tertiary,
-              isLoading: projectsState.isLoading,
+              isLoading: dashboardState.isLoading && stats == null,
             ),
             const SizedBox(height: 12),
             _DashboardCard(
               title: 'Reservas',
-              value: reservationsState.reservations.length.toString(),
+              value: stats?.reservations.total.toString() ?? '0',
               iconPath: 'assets/images/icon_reservations.svg',
               color: colorScheme.error,
-              isLoading: reservationsState.isLoading,
+              isLoading: dashboardState.isLoading && stats == null,
             ),
           ],
         ),

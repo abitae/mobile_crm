@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 import 'app_config.dart';
 
 enum ApiEnvironment {
@@ -87,11 +88,18 @@ class ApiConfigService {
     await prefs.remove(_customUrlKey);
   }
 
-  // Test de conectividad con el servidor
+  // Test de conectividad con el servidor usando endpoint /health
   static Future<bool> testConnection(String url) async {
     try {
-      // TODO: Implementar test de conexión real con Dio
-      return true;
+      final normalizedUrl = normalizeUrl(url);
+      final dio = Dio(BaseOptions(
+        baseUrl: normalizedUrl,
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ));
+      
+      final response = await dio.get('/cazador/health');
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }

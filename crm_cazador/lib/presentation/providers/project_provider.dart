@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:state_notifier/state_notifier.dart';
 import '../../../data/services/project_service.dart';
@@ -128,7 +129,7 @@ class ProjectsNotifier extends StateNotifier<ProjectsState> {
         projects: refresh ? response.data : [...state.projects, ...response.data],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoading: false,
         error: null,
       );
@@ -171,7 +172,7 @@ class ProjectsNotifier extends StateNotifier<ProjectsState> {
         projects: [...state.projects, ...response.data],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoadingMore: false,
       );
     } on ApiException catch (e) {
@@ -371,7 +372,7 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
         units: refresh ? response.data : [...state.units, ...response.data],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoading: false,
         error: null,
       );
@@ -380,7 +381,7 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
       state = newState;
       
       // Debug: verificar que el estado se actualizó
-      print('✅ [ProjectUnitsNotifier] Estado actualizado: ${state.units.length} unidades');
+      debugPrint('✅ [ProjectUnitsNotifier] Estado actualizado: ${state.units.length} unidades');
     } on ApiException catch (e) {
       // Debug: error de API
       // print('API Error loading units: ${e.message}');
@@ -415,7 +416,7 @@ class ProjectUnitsNotifier extends StateNotifier<ProjectUnitsState> {
         units: [...state.units, ...response.data],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoadingMore: false,
       );
     } on ApiException catch (e) {

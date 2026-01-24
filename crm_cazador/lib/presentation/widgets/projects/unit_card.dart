@@ -19,7 +19,8 @@ class UnitCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final currencyFormat = NumberFormat.currency(symbol: 'S/ ', decimalDigits: 0);
 
-    return Card(
+    return RepaintBoundary(
+      child: Card(
       elevation: 1,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: InkWell(
@@ -245,6 +246,7 @@ class UnitCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

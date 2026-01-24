@@ -1,19 +1,26 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'dart:io';
 import 'api_service.dart';
 import '../models/reservation_model.dart';
 import '../models/api_response.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Servicio para gestión de reservas (Cazador)
 class ReservationService {
-  /// Obtener lista de reservas paginada
-  /// Nota: Según la documentación, este endpoint solo acepta `page` y `per_page`.
+  /// Obtener lista de reservas paginada con filtros
   /// El filtrado por `advisor_id` es automático en el backend según el usuario autenticado.
-  /// No hay filtros adicionales disponibles (search, status, payment_status, etc.)
   static Future<PaginatedResponse<ReservationModel>> getReservations({
     int page = 1,
     int perPage = 15,
+    String? search,
+    String? status,
+    String? paymentStatus,
+    int? projectId,
+    int? clientId,
+    int? advisorId,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -21,7 +28,26 @@ class ReservationService {
         'per_page': perPage.clamp(1, 100),
       };
 
-      print('📤 [ReservationService] Solicitando reservas: page=$page, perPage=$perPage');
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+      if (status != null && status.isNotEmpty) {
+        queryParams['status'] = status;
+      }
+      if (paymentStatus != null && paymentStatus.isNotEmpty) {
+        queryParams['payment_status'] = paymentStatus;
+      }
+      if (projectId != null) {
+        queryParams['project_id'] = projectId;
+      }
+      if (clientId != null) {
+        queryParams['client_id'] = clientId;
+      }
+      if (advisorId != null) {
+        queryParams['advisor_id'] = advisorId;
+      }
+
+      debugPrint('📤 [ReservationService] Solicitando reservas: page=$page, perPage=$perPage');
       
       final response = await ApiService.get(
         '/cazador/reservations',
@@ -29,25 +55,21 @@ class ReservationService {
       );
 
       // Log para debugging
-      print('📥 [ReservationService] Respuesta recibida: ${response.statusCode}');
-      print('📥 [ReservationService] Headers: ${response.headers}');
+      debugPrint('📥 [ReservationService] Respuesta recibida: ${response.statusCode}');
+      debugPrint('📥 [ReservationService] Headers: ${response.headers}');
       
-      // Verificar que la respuesta tenga datos
-      if (response.data == null) {
-        print('❌ [ReservationService] Respuesta sin datos');
-        throw ApiException('Respuesta vacía del servidor');
-      }
-      
-      print('📥 [ReservationService] Tipo de respuesta: ${response.data.runtimeType}');
-      
-      final responseData = response.data as Map<String, dynamic>?;
-      
-      if (responseData == null) {
-        print('❌ [ReservationService] Respuesta no es un Map: ${response.data}');
-        throw ApiException('Respuesta inválida: formato de datos incorrecto');
-      }
-      
-      print('📥 [ReservationService] Respuesta data keys: ${responseData.keys}');
+          // Verificar que la respuesta tenga datos
+          if (response.data == null) {
+            AppLogger.error('Respuesta sin datos', tag: 'ReservationService');
+            throw ApiException('Respuesta vacía del servidor');
+          }
+          
+          final responseData = response.data as Map<String, dynamic>?;
+          
+          if (responseData == null) {
+            AppLogger.error('Respuesta no es un Map', tag: 'ReservationService', data: {'data': response.data});
+            throw ApiException('Respuesta inválida: formato de datos incorrecto');
+          }
       
       // Verificar estructura de respuesta
       if (responseData['success'] == false) {
@@ -71,55 +93,46 @@ class ReservationService {
           }
         }
         
-        final finalErrorMsg = specificError ?? errorMsg;
-        print('❌ [ReservationService] API retornó success=false: $finalErrorMsg');
-        print('❌ [ReservationService] Errores completos: $errors');
-        throw ApiException(finalErrorMsg);
+            final finalErrorMsg = specificError ?? errorMsg;
+            AppLogger.error('API retornó success=false', tag: 'ReservationService', data: {'message': finalErrorMsg, 'errors': errors});
+            throw ApiException(finalErrorMsg);
       }
       
-      final dataObj = responseData['data'] as Map<String, dynamic>?;
+          final dataObj = responseData['data'] as Map<String, dynamic>?;
 
-      if (dataObj == null) {
-        print('❌ [ReservationService] Respuesta sin objeto data');
-        print('❌ [ReservationService] Respuesta completa: $responseData');
-        throw ApiException('Respuesta inválida: no se encontró el objeto data');
-      }
-      
-      print('📥 [ReservationService] Data object keys: ${dataObj.keys}');
+          if (dataObj == null) {
+            AppLogger.error('Respuesta sin objeto data', tag: 'ReservationService', data: {'response': responseData});
+            throw ApiException('Respuesta inválida: no se encontró el objeto data');
+          }
 
-      final reservations = dataObj['reservations'] as List<dynamic>?;
+          final reservations = dataObj['reservations'] as List<dynamic>?;
 
-      if (reservations == null) {
-        print('❌ [ReservationService] No se encontró array reservations en data');
-        print('❌ [ReservationService] Data object: $dataObj');
-        throw ApiException('Respuesta inválida: no se encontró el array reservations');
-      }
-      
-      print('📋 [ReservationService] Reservas encontradas: ${reservations.length}');
+          if (reservations == null) {
+            AppLogger.error('No se encontró array reservations en data', tag: 'ReservationService', data: {'data': dataObj});
+            throw ApiException('Respuesta inválida: no se encontró el array reservations');
+          }
+          
+          AppLogger.debug('Reservas encontradas: ${reservations.length}', tag: 'ReservationService');
 
       final pagination = dataObj['pagination'] as Map<String, dynamic>? ?? {};
 
-      // Parsear reservas con manejo de errores individual
-      final parsedReservations = <ReservationModel>[];
-      print('📋 [ReservationService] Parseando ${reservations.length} reservas...');
-      
-      for (var item in reservations) {
-        if (item is! Map<String, dynamic>) {
-          print('⚠️ [ReservationService] Item no es Map: $item');
-          continue;
-        }
-        try {
-          parsedReservations.add(ReservationModel.fromJson(item));
-        } catch (e, stackTrace) {
-          // Log error pero continuar con las demás reservas
-          print('⚠️ [ReservationService] Error al parsear reserva: $e');
-          print('⚠️ [ReservationService] StackTrace: $stackTrace');
-          print('⚠️ [ReservationService] Datos: $item');
-          // Continuar con la siguiente reserva
-        }
-      }
-      
-      print('✅ [ReservationService] ${parsedReservations.length} reservas parseadas exitosamente');
+          // Parsear reservas con manejo de errores individual
+          final parsedReservations = <ReservationModel>[];
+          
+          for (var item in reservations) {
+            if (item is! Map<String, dynamic>) {
+              AppLogger.warning('Item no es Map', tag: 'ReservationService', data: {'item': item});
+              continue;
+            }
+            try {
+              parsedReservations.add(ReservationModel.fromJson(item));
+            } catch (e, stackTrace) {
+              // Log error pero continuar con las demás reservas
+              AppLogger.warning('Error al parsear reserva', tag: 'ReservationService', error: e, stackTrace: stackTrace, data: {'item': item});
+            }
+          }
+          
+          AppLogger.info('${parsedReservations.length} reservas parseadas exitosamente', tag: 'ReservationService');
 
       return PaginatedResponse<ReservationModel>(
         data: parsedReservations,
@@ -129,41 +142,13 @@ class ReservationService {
         perPage: pagination['per_page'] as int? ?? 15,
       );
     } on DioException catch (e) {
-      print('❌ [ReservationService] DioException capturada');
-      print('❌ [ReservationService] Tipo: ${e.type}');
-      print('❌ [ReservationService] Mensaje: ${e.message}');
-      print('❌ [ReservationService] Status Code: ${e.response?.statusCode}');
-      print('❌ [ReservationService] Response Data: ${e.response?.data}');
-      
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-        print('❌ [ReservationService] Mensaje del servidor: $errorMessage');
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(errorMessage ?? 'No tienes permiso para acceder a las reservas');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Endpoint no encontrado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      } else if (e.response?.statusCode == 500) {
-        throw ApiException(errorMessage ?? 'Error interno del servidor');
-      } else if (e.type == DioExceptionType.connectionTimeout || 
-                 e.type == DioExceptionType.receiveTimeout) {
-        throw ApiException('Tiempo de espera agotado. Verifica tu conexión a internet.');
-      } else if (e.type == DioExceptionType.connectionError) {
-        throw ApiException('Error de conexión. Verifica tu conexión a internet.');
-      }
-      throw ApiException(
-          errorMessage ?? 'Error al obtener reservas: ${e.message ?? e.type.toString()}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener reservas',
+      );
     } catch (e, stackTrace) {
       if (e is ApiException) rethrow;
-      print('❌ [ReservationService] Error inesperado: $e');
-      print('❌ [ReservationService] StackTrace: $stackTrace');
+      AppLogger.error('Error inesperado al obtener reservas', tag: 'ReservationService', error: e, stackTrace: stackTrace);
       throw ApiException('Error inesperado: ${e.toString()}');
     }
   }
@@ -180,22 +165,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Reserva no encontrada');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            errorMessage ?? 'No tienes permiso para acceder a esta reserva');
-      }
-      throw ApiException(
-          errorMessage ?? 'Error al obtener reserva: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener reserva',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -219,26 +192,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-            specificError ?? apiMessage ?? 'Error de validación');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(
-            apiMessage ?? 'Cliente, proyecto o unidad no encontrados');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(apiMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(apiMessage ?? 'Error al crear reserva: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al crear reserva',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -264,29 +221,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(apiMessage ?? 'Reserva no encontrada');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            apiMessage ?? 'No tienes permiso para actualizar esta reserva');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-            specificError ??
-                apiMessage ??
-                'Solo se pueden editar reservas activas o error de validación');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al actualizar reserva: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al actualizar reserva',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -331,31 +269,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 400) {
-        throw ApiException(apiMessage ?? 'ID de reserva inválido');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            apiMessage ?? 'No tienes permiso para confirmar esta reserva');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(apiMessage ?? 'Reserva no encontrada');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-            specificError ??
-                apiMessage ??
-                'Solo se pueden confirmar reservas activas o error de validación');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al confirmar reserva: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al confirmar reserva',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -386,31 +303,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 400) {
-        throw ApiException(apiMessage ?? 'ID de reserva inválido');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            apiMessage ?? 'No tienes permiso para cancelar esta reserva');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(apiMessage ?? 'Reserva no encontrada');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-            specificError ??
-                apiMessage ??
-                'La reserva no puede ser cancelada o error de validación');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al cancelar reserva: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al cancelar reserva',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -432,31 +328,10 @@ class ReservationService {
       return ReservationModel.fromJson(
           reservationData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 400) {
-        throw ApiException(apiMessage ?? 'ID de reserva inválido');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            apiMessage ?? 'No tienes permiso para convertir esta reserva');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(apiMessage ?? 'Reserva no encontrada');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-            specificError ??
-                apiMessage ??
-                'Solo se pueden convertir reservas confirmadas o unidad no puede venderse');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al convertir reserva a venta: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al convertir reserva a venta',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

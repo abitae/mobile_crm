@@ -1,0 +1,150 @@
+import 'package:dio/dio.dart';
+import 'api_service.dart';
+import '../../core/exceptions/api_exception.dart';
+
+/// Modelo de estadísticas del dashboard
+class DashboardStats {
+  final ClientsStats clients;
+  final DaterosStats dateros;
+  final ProjectsStats projects;
+  final ReservationsStats reservations;
+
+  DashboardStats({
+    required this.clients,
+    required this.dateros,
+    required this.projects,
+    required this.reservations,
+  });
+
+  factory DashboardStats.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] as Map<String, dynamic>? ?? json;
+    
+    return DashboardStats(
+      clients: ClientsStats.fromJson(data['clients'] as Map<String, dynamic>? ?? {}),
+      dateros: DaterosStats.fromJson(data['dateros'] as Map<String, dynamic>? ?? {}),
+      projects: ProjectsStats.fromJson(data['projects'] as Map<String, dynamic>? ?? {}),
+      reservations: ReservationsStats.fromJson(data['reservations'] as Map<String, dynamic>? ?? {}),
+    );
+  }
+}
+
+class ClientsStats {
+  final int total;
+  final Map<String, int> byStatus;
+  final Map<String, int> byType;
+
+  ClientsStats({
+    required this.total,
+    required this.byStatus,
+    required this.byType,
+  });
+
+  factory ClientsStats.fromJson(Map<String, dynamic> json) {
+    return ClientsStats(
+      total: json['total'] as int? ?? 0,
+      byStatus: (json['by_status'] as Map<String, dynamic>? ?? {})
+          .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+      byType: (json['by_type'] as Map<String, dynamic>? ?? {})
+          .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+    );
+  }
+}
+
+class DaterosStats {
+  final int total;
+  final int active;
+  final int inactive;
+
+  DaterosStats({
+    required this.total,
+    required this.active,
+    required this.inactive,
+  });
+
+  factory DaterosStats.fromJson(Map<String, dynamic> json) {
+    return DaterosStats(
+      total: json['total'] as int? ?? 0,
+      active: json['active'] as int? ?? 0,
+      inactive: json['inactive'] as int? ?? 0,
+    );
+  }
+}
+
+class ProjectsStats {
+  final int total;
+  final int withAvailableUnits;
+
+  ProjectsStats({
+    required this.total,
+    required this.withAvailableUnits,
+  });
+
+  factory ProjectsStats.fromJson(Map<String, dynamic> json) {
+    return ProjectsStats(
+      total: json['total'] as int? ?? 0,
+      withAvailableUnits: json['with_available_units'] as int? ?? 0,
+    );
+  }
+}
+
+class ReservationsStats {
+  final int total;
+  final Map<String, int> byStatus;
+  final Map<String, int> byPaymentStatus;
+
+  ReservationsStats({
+    required this.total,
+    required this.byStatus,
+    required this.byPaymentStatus,
+  });
+
+  factory ReservationsStats.fromJson(Map<String, dynamic> json) {
+    return ReservationsStats(
+      total: json['total'] as int? ?? 0,
+      byStatus: (json['by_status'] as Map<String, dynamic>? ?? {})
+          .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+      byPaymentStatus: (json['by_payment_status'] as Map<String, dynamic>? ?? {})
+          .map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+    );
+  }
+}
+
+/// Servicio para obtener estadísticas del dashboard
+class DashboardService {
+  /// Obtener estadísticas del dashboard
+  static Future<DashboardStats> getStats() async {
+    try {
+      final response = await ApiService.get('/cazador/dashboard/stats');
+      
+      final responseData = response.data as Map<String, dynamic>?;
+      
+      if (responseData == null) {
+        throw ApiException('Respuesta inválida del servidor');
+      }
+      
+      return DashboardStats.fromJson(responseData);
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      String? errorMessage;
+      
+      if (responseData is Map<String, dynamic>) {
+        errorMessage = responseData['message'] as String?;
+      }
+      
+      if (e.response?.statusCode == 401) {
+        throw ApiException(errorMessage ?? 'Usuario no autenticado');
+      } else if (e.response?.statusCode == 404) {
+        throw ApiException(errorMessage ?? 'Endpoint de dashboard no encontrado');
+      } else if (e.response?.statusCode == 500) {
+        throw ApiException(errorMessage ?? 'Error interno del servidor');
+      }
+      
+      throw ApiException(
+        errorMessage ?? 'Error al obtener estadísticas: ${e.message}',
+      );
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error inesperado: ${e.toString()}');
+    }
+  }
+}

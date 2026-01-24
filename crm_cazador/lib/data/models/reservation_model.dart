@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Modelo de reserva para Cazador
 class ReservationModel {
   final int id;
@@ -110,7 +112,7 @@ class ReservationModel {
           return null;
         }
       } catch (e) {
-        print('⚠️ [ReservationModel] Error al parsear fecha: $dateValue - $e');
+        debugPrint('⚠️ [ReservationModel] Error al parsear fecha: $dateValue - $e');
         return null;
       }
     }
@@ -122,7 +124,7 @@ class ReservationModel {
       try {
         return fromJson(value);
       } catch (e) {
-        print('⚠️ [ReservationModel] Error al parsear objeto anidado: $e');
+        debugPrint('⚠️ [ReservationModel] Error al parsear objeto anidado: $e');
         return null;
       }
     }
@@ -321,8 +323,8 @@ class ReservationClient {
         documentNumber: json['document_number'] as String?,
       );
     } catch (e) {
-      print('⚠️ [ReservationClient] Error al parsear: $e');
-      print('⚠️ [ReservationClient] JSON: $json');
+      debugPrint('⚠️ [ReservationClient] Error al parsear: $e');
+      debugPrint('⚠️ [ReservationClient] JSON: $json');
       rethrow;
     }
   }
@@ -364,8 +366,8 @@ class ReservationProject {
         province: json['province'] as String?,
       );
     } catch (e) {
-      print('⚠️ [ReservationProject] Error al parsear: $e');
-      print('⚠️ [ReservationProject] JSON: $json');
+      debugPrint('⚠️ [ReservationProject] Error al parsear: $e');
+      debugPrint('⚠️ [ReservationProject] JSON: $json');
       rethrow;
     }
   }
@@ -422,8 +424,8 @@ class ReservationUnit {
             : null,
       );
     } catch (e) {
-      print('⚠️ [ReservationUnit] Error al parsear: $e');
-      print('⚠️ [ReservationUnit] JSON: $json');
+      debugPrint('⚠️ [ReservationUnit] Error al parsear: $e');
+      debugPrint('⚠️ [ReservationUnit] JSON: $json');
       rethrow;
     }
   }
@@ -462,8 +464,8 @@ class ReservationAdvisor {
         email: json['email'] as String?,
       );
     } catch (e) {
-      print('⚠️ [ReservationAdvisor] Error al parsear: $e');
-      print('⚠️ [ReservationAdvisor] JSON: $json');
+      debugPrint('⚠️ [ReservationAdvisor] Error al parsear: $e');
+      debugPrint('⚠️ [ReservationAdvisor] JSON: $json');
       rethrow;
     }
   }

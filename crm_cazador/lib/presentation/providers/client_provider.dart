@@ -113,7 +113,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         clients: newClients,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoading: false,
         error: null,
       );
@@ -155,7 +155,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         clients: [...state.clients, ...newClients],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoadingMore: false,
       );
     } on ApiException catch (e) {

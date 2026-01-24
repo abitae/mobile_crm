@@ -48,9 +48,9 @@ class _ReservationsListScreenState
   }
 
   void _handleSearch(String query) {
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 300), () async {
       if (_searchController.text == query) {
-        ref.read(reservationsNotifierProvider).setSearch(
+        await ref.read(reservationsNotifierProvider).setSearch(
               query.isEmpty ? null : query,
             );
       }
@@ -89,9 +89,9 @@ class _ReservationsListScreenState
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
-                        onPressed: () {
+                        onPressed: () async {
                           _searchController.clear();
-                          ref.read(reservationsNotifierProvider).setSearch(null);
+                          await ref.read(reservationsNotifierProvider).setSearch(null);
                         },
                       )
                     : null,
@@ -113,14 +113,14 @@ class _ReservationsListScreenState
                   if (reservationsState.statusFilter != null)
                     FilterChip(
                       label: Text(_getStatusLabel(reservationsState.statusFilter!)),
-                      onSelected: (_) {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onSelected: (_) async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               status: null,
                             );
                       },
                       deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onDeleted: () async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               status: null,
                             );
                       },
@@ -129,14 +129,14 @@ class _ReservationsListScreenState
                     FilterChip(
                       label: Text(_getPaymentStatusLabel(
                           reservationsState.paymentStatusFilter!)),
-                      onSelected: (_) {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onSelected: (_) async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               paymentStatus: null,
                             );
                       },
                       deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onDeleted: () async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               paymentStatus: null,
                             );
                       },
@@ -144,14 +144,14 @@ class _ReservationsListScreenState
                   if (reservationsState.projectIdFilter != null)
                     FilterChip(
                       label: Text('Proyecto ${reservationsState.projectIdFilter}'),
-                      onSelected: (_) {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onSelected: (_) async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               projectId: null,
                             );
                       },
                       deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onDeleted: () async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               projectId: null,
                             );
                       },
@@ -159,14 +159,14 @@ class _ReservationsListScreenState
                   if (reservationsState.clientIdFilter != null)
                     FilterChip(
                       label: Text('Cliente ${reservationsState.clientIdFilter}'),
-                      onSelected: (_) {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onSelected: (_) async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               clientId: null,
                             );
                       },
                       deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(reservationsNotifierProvider).setFilters(
+                      onDeleted: () async {
+                        await ref.read(reservationsNotifierProvider).setFilters(
                               clientId: null,
                             );
                       },
@@ -202,16 +202,16 @@ class _ReservationsListScreenState
       isScrollControlled: true,
       builder: (context) => _FilterBottomSheet(
         reservationsState: reservationsState,
-        onApply: (status, paymentStatus, projectId, clientId) {
-          ref.read(reservationsNotifierProvider).setFilters(
+        onApply: (status, paymentStatus, projectId, clientId) async {
+          await ref.read(reservationsNotifierProvider).setFilters(
                 status: status,
                 paymentStatus: paymentStatus,
                 projectId: projectId,
                 clientId: clientId,
               );
         },
-        onClear: () {
-          ref.read(reservationsNotifierProvider).clearFilters();
+        onClear: () async {
+          await ref.read(reservationsNotifierProvider).clearFilters();
         },
       ),
     );
@@ -292,9 +292,9 @@ class _ReservationsListScreenState
 /// Widget para el bottom sheet de filtros
 class _FilterBottomSheet extends ConsumerStatefulWidget {
   final ReservationsState reservationsState;
-  final void Function(String? status, String? paymentStatus, int? projectId,
+  final Future<void> Function(String? status, String? paymentStatus, int? projectId,
       int? clientId) onApply;
-  final VoidCallback onClear;
+  final Future<void> Function() onClear;
 
   const _FilterBottomSheet({
     required this.reservationsState,
@@ -453,9 +453,9 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
-                    widget.onClear();
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    await widget.onClear();
+                    if (mounted) Navigator.pop(context);
                   },
                   child: const Text('Limpiar'),
                 ),
@@ -463,8 +463,8 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
               const SizedBox(width: 16),
               Expanded(
                 child: FilledButton(
-                  onPressed: () {
-                    widget.onApply(
+                  onPressed: () async {
+                    await widget.onApply(
                       _selectedStatus,
                       _selectedPaymentStatus,
                       _projectIdText != null
@@ -474,7 +474,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
                           ? int.tryParse(_clientIdText!)
                           : null,
                     );
-                    Navigator.pop(context);
+                    if (mounted) Navigator.pop(context);
                   },
                   child: const Text('Aplicar'),
                 ),

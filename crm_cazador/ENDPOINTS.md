@@ -1,6 +1,7 @@
 ## API Cazador - Endpoints
 
 Base URL: `/api/cazador`
+Versionado opcional: `/api/v1/cazador`
 
 Autenticacion:
 - Usa JWT en header `Authorization: Bearer <token>`
@@ -33,6 +34,13 @@ POST `/auth/change-password`
 
 ---
 
+### Health
+
+GET `/health`
+- Descripcion: Health check publico del API.
+
+---
+
 ### Clientes
 
 GET `/clients`
@@ -43,6 +51,25 @@ GET `/clients`
   - `status` (string, opcional)
   - `type` (string, opcional)
   - `source` (string, opcional)
+  - `create_type` (string, opcional)
+  - `include` (string, opcional, ej: `activities,reservations`)
+
+GET `/clients/suggestions`
+- Descripcion: Sugerencias de clientes por texto.
+- Query:
+  - `q` (string, requerido, min 2)
+  - `limit` (int, opcional)
+
+GET `/clients/batch?ids=1,2,3`
+- Descripcion: Obtiene multiples clientes por IDs.
+
+POST `/clients/batch`
+- Descripcion: Crea o actualiza clientes en batch.
+- Body:
+  - `clients` (array, requerido)
+
+POST `/clients/validate`
+- Descripcion: Valida payload de cliente sin persistir.
 
 POST `/clients`
 - Descripcion: Crea un cliente y lo asigna al cazador autenticado.
@@ -65,6 +92,8 @@ GET `/clients/options`
 
 GET `/clients/{id}`
 - Descripcion: Obtiene un cliente especifico.
+- Query:
+  - `include` (string, opcional)
 
 PUT/PATCH `/clients/{id}`
 - Descripcion: Actualiza un cliente asignado o creado por el cazador.
@@ -77,6 +106,9 @@ POST `/clients/{client}/activities`
 POST `/clients/{client}/tasks`
 - Descripcion: Crea una tarea para el cliente.
 - Body: campos de tarea segun `TaskService`.
+
+GET `/clients/export`
+- Descripcion: Exporta clientes en CSV (aplica filtros).
 
 ---
 
@@ -96,12 +128,20 @@ GET `/projects`
   - `province` (string, opcional)
   - `region` (string, opcional)
   - `has_available_units` (bool, opcional)
+  - `include` (string, opcional, ej: `advisors,reservations`)
+
+GET `/projects/suggestions`
+- Descripcion: Sugerencias de proyectos por texto.
+- Query:
+  - `q` (string, requerido, min 2)
+  - `limit` (int, opcional)
 
 GET `/projects/{id}`
 - Descripcion: Detalle del proyecto. Incluye unidades disponibles si `include_units=true`.
 - Query:
   - `include_units` (bool, opcional, default true)
   - `units_per_page` (int, opcional)
+  - `include` (string, opcional, ej: `reservations`)
 
 GET `/projects/{id}/units`
 - Descripcion: Lista unidades disponibles del proyecto.
@@ -141,12 +181,29 @@ PUT/PATCH `/dateros/{id}`
 
 ---
 
+### Dashboard
+
+GET `/dashboard/stats`
+- Descripcion: Estadisticas agregadas (clientes, dateros, proyectos, reservas).
+
+---
+
 ### Reservas
 
 GET `/reservations`
 - Descripcion: Lista reservas (filtradas por asesor si no es admin/lider).
 - Query:
   - `per_page` (int, opcional)
+  - `search` (string, opcional)
+  - `status` (string, opcional)
+  - `payment_status` (string, opcional)
+  - `project_id` (int, opcional)
+  - `client_id` (int, opcional)
+  - `advisor_id` (int, opcional)
+  - `include` (string, opcional)
+
+POST `/reservations/validate`
+- Descripcion: Valida payload de reserva sin persistir.
 
 POST `/reservations`
 - Descripcion: Crea una reserva en estado `activa`.
@@ -168,6 +225,8 @@ POST `/reservations`
 
 GET `/reservations/{id}`
 - Descripcion: Obtiene una reserva especifica (solo propia si no es admin/lider).
+- Query:
+  - `include` (string, opcional)
 
 PUT/PATCH `/reservations/{id}`
 - Descripcion: Actualiza una reserva activa.
@@ -207,6 +266,14 @@ POST `/reservations/{id}/cancel`
 - Body:
   - `cancel_note` (string, requerido, min 10, max 500)
 
+POST `/reservations/batch`
+- Descripcion: Crea reservas en batch.
+- Body:
+  - `reservations` (array, requerido)
+
+GET `/reservations/export`
+- Descripcion: Exporta reservas en CSV (aplica filtros).
+
 POST `/reservations/{id}/convert-to-sale`
 - Descripcion: Convierte la reserva confirmada a venta.
 
@@ -217,3 +284,23 @@ POST `/reservations/{id}/convert-to-sale`
 POST `/documents/search`
 - Descripcion: Busca documento en servicio externo.
 - Body: segun `DocumentController::search`.
+
+POST `/documents/validate-dni`
+- Descripcion: Valida formato de DNI.
+
+---
+
+### Sync
+
+GET `/sync?since=2025-01-01T00:00:00Z`
+- Descripcion: Sincroniza cambios desde una fecha.
+
+---
+
+### Reportes
+
+GET `/reports/sales`
+- Descripcion: Exporta reporte de ventas en CSV.
+- Query:
+  - `date_from` (date, opcional)
+  - `date_to` (date, opcional)

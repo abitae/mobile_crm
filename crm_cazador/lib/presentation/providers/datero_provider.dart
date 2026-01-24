@@ -98,7 +98,7 @@ class DaterosNotifier extends StateNotifier<DaterosState> {
         dateros: newDateros,
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoading: false,
         error: null,
       );
@@ -138,7 +138,7 @@ class DaterosNotifier extends StateNotifier<DaterosState> {
         dateros: [...state.dateros, ...newDateros],
         currentPage: response.currentPage,
         totalPages: response.totalPages,
-        hasMore: response.currentPage < response.totalPages,
+        hasMore: response.hasMore,
         isLoadingMore: false,
       );
     } on ApiException catch (e) {

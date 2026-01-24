@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../models/client_model.dart';
 import '../models/api_response.dart';
 import '../models/client_options.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Servicio para gestión de clientes (Cazador)
 class ClientService {
@@ -39,21 +41,44 @@ class ClientService {
         queryParams['create_type'] = createType;
       }
 
+      AppLogger.apiRequest('GET', '/cazador/clients', queryParams: queryParams);
+      
       final response = await ApiService.get(
         '/cazador/clients',
         queryParameters: queryParams,
       );
 
-      final responseData = response.data as Map<String, dynamic>;
-      return PaginatedResponse.fromJson(
-        responseData,
-        (json) {
-          if (json is Map<String, dynamic>) {
-            return ClientModel.fromJson(json);
-          }
-          throw Exception('Formato de cliente inválido');
-        },
-      );
+      AppLogger.apiResponse('GET', '/cazador/clients', response.statusCode ?? 200);
+      
+      final responseData = response.data as Map<String, dynamic>?;
+      
+      if (responseData == null) {
+        AppLogger.error('Respuesta sin datos', tag: 'ClientService');
+        throw ApiException('Respuesta vacía del servidor');
+      }
+      
+      // Log de la estructura recibida para debugging
+      AppLogger.debug('Estructura de respuesta recibida', tag: 'ClientService', data: {
+        'keys': responseData.keys.toList(),
+        'has_data': responseData.containsKey('data'),
+        'data_type': responseData['data']?.runtimeType.toString(),
+      });
+      
+      try {
+        return PaginatedResponse.fromJson(
+          responseData,
+          (json) {
+            if (json is Map<String, dynamic>) {
+              return ClientModel.fromJson(json);
+            }
+            throw Exception('Formato de cliente inválido');
+          },
+        );
+      } catch (e, stackTrace) {
+        AppLogger.error('Error al parsear respuesta de clientes', tag: 'ClientService', 
+          error: e, stackTrace: stackTrace, data: {'response_structure': responseData});
+        rethrow;
+      }
     } on DioException catch (e) {
       final responseData = e.response?.data;
       String? errorMessage;

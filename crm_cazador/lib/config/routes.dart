@@ -7,6 +7,7 @@ import '../../presentation/screens/projects/projects_list_screen.dart';
 import '../../presentation/screens/projects/project_detail_screen.dart';
 import '../../presentation/screens/projects/project_units_screen.dart';
 import '../../presentation/screens/projects/project_select_screen.dart';
+import '../../presentation/screens/projects/unit_detail_screen.dart';
 import '../../presentation/screens/clients/clients_list_screen.dart';
 import '../../presentation/screens/clients/client_detail_screen.dart';
 import '../../presentation/screens/clients/client_form_screen.dart';
@@ -53,7 +54,7 @@ final routesProvider = Provider<GoRouter>((ref) {
         return null;
       } catch (e) {
         // Si hay un error, permitir navegación a splash o login
-        print('Error en redirect: $e');
+        debugPrint('Error en redirect: $e');
         final isSplash = state.matchedLocation == '/splash';
         final isLogin = state.matchedLocation == '/login';
         if (isSplash || isLogin) return null;
@@ -114,6 +115,20 @@ final routesProvider = Provider<GoRouter>((ref) {
           final id = int.parse(state.pathParameters['id']!);
           return _buildPageWithTransition(
             ProjectUnitsScreen(projectId: id),
+            state,
+            transitionType: TransitionType.slideRight,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/projects/:projectId/units/:unitId',
+        name: 'unit-detail',
+        pageBuilder: (context, state) {
+          final projectId = int.parse(state.pathParameters['projectId']!);
+          final unitId = int.parse(state.pathParameters['unitId']!);
+          // La unidad se obtendrá del provider en la pantalla
+          return _buildPageWithTransition(
+            UnitDetailScreenWrapper(projectId: projectId, unitId: unitId),
             state,
             transitionType: TransitionType.slideRight,
           );

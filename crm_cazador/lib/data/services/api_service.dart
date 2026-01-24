@@ -1,8 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../config/app_config.dart';
 import '../../config/api_config.dart';
 import 'storage_service.dart';
 import 'auth_service.dart';
+import '../cache/http_cache_service.dart';
+import '../interceptors/retry_interceptor.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Servicio base para comunicación con la API
 class ApiService {
@@ -33,14 +37,42 @@ class ApiService {
         listFormat: ListFormat.multiCompatible,
       ));
 
-      // Interceptor para agregar token automáticamente
+      // Interceptor de retry para errores de red transitorios (debe ir antes del interceptor de auth)
+      _dio!.interceptors.add(RetryInterceptor(
+        maxRetries: 3,
+        baseDelay: const Duration(seconds: 1),
+      ));
+
+      // Interceptor para agregar token automáticamente y headers de caché HTTP
       _dio!.interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await StorageService.getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          
+          // Agregar headers de validación condicional para GET requests
+          if (options.method == 'GET') {
+            await HttpCacheService.addConditionalHeaders(options);
+          }
+          
           return handler.next(options);
+        },
+        onResponse: (response, handler) async {
+          // Manejar respuesta 304 Not Modified (caché válido)
+          if (response.statusCode == 304) {
+            // El servidor indica que el caché es válido
+            // No necesitamos hacer nada, el cliente puede usar su caché local
+            return handler.next(response);
+          }
+          
+          // Guardar headers de caché para requests GET
+          if (response.requestOptions.method == 'GET') {
+            final url = response.requestOptions.uri.toString();
+            await HttpCacheService.isCachedAndValid(url, response);
+          }
+          
+          return handler.next(response);
         },
         onError: (error, handler) async {
           // Manejar 401 (token expirado o inválido) - intentar refresh token
@@ -92,7 +124,7 @@ class ApiService {
           logPrint: (obj) {
             // Solo loggear errores en producción
             if (obj.toString().contains('ERROR') || obj.toString().contains('Exception')) {
-              print(obj);
+              debugPrint(obj.toString());
             }
           },
         ));
@@ -101,7 +133,7 @@ class ApiService {
       _initialized = true;
     } catch (e) {
       // Si falla la inicialización, usar URL por defecto
-      print('Error al obtener URL base, usando URL por defecto: $e');
+      debugPrint('Error al obtener URL base, usando URL por defecto: $e');
       final defaultUrl = AppConfig.defaultBaseUrl;
       final normalizedUrl = ApiConfigService.normalizeUrl(defaultUrl);
       

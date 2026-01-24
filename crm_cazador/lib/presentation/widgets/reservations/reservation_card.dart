@@ -21,8 +21,9 @@ class ReservationCard extends StatelessWidget {
     final currencyFormat = NumberFormat.currency(symbol: 'S/ ', decimalDigits: 0);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
-    return AnimatedCard(
-      child: Card(
+    return RepaintBoundary(
+      child: AnimatedCard(
+        child: Card(
         elevation: 4,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -241,6 +242,7 @@ class ReservationCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

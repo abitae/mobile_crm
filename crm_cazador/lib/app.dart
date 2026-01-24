@@ -5,6 +5,8 @@ import 'presentation/theme/app_theme.dart';
 import 'config/routes.dart';
 import 'data/services/storage_service.dart';
 import 'data/services/api_service.dart';
+import 'presentation/widgets/connectivity/connectivity_banner.dart';
+import 'data/cache/hive_cache_service.dart';
 
 /// Widget principal de la aplicación
 class App extends ConsumerWidget {
@@ -13,15 +15,15 @@ class App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (kDebugMode) {
-      print('🔧 Construyendo App widget...');
+      debugPrint('🔧 Construyendo App widget...');
     }
     try {
       if (kDebugMode) {
-        print('🔗 Obteniendo router...');
+        debugPrint('🔗 Obteniendo router...');
       }
       final router = ref.watch(routesProvider);
       if (kDebugMode) {
-        print('✅ Router obtenido correctamente');
+        debugPrint('✅ Router obtenido correctamente');
       }
 
       return MaterialApp.router(
@@ -31,26 +33,36 @@ class App extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         // Configuraciones para depuración
         builder: (context, child) {
+          Widget result = child ?? const SizedBox.shrink();
+          
+          // Agregar banner de conectividad
+          result = Column(
+            children: [
+              const ConnectivityBanner(),
+              Expanded(child: result),
+            ],
+          );
+          
           // En modo debug, agregar overlay de información
           if (kDebugMode) {
-            return MediaQuery(
+            result = MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 textScaler: MediaQuery.of(context).textScaler.clamp(
                   minScaleFactor: 0.8,
                   maxScaleFactor: 1.2,
                 ),
               ),
-              child: child ?? const SizedBox.shrink(),
+              child: result,
             );
           }
-          return child ?? const SizedBox.shrink();
+          return result;
         },
       );
     } catch (e, stackTrace) {
       // Si hay un error al construir el router, mostrar un error widget
       if (kDebugMode) {
-        print('❌ Error al construir App: $e');
-        print('Stack trace: $stackTrace');
+        debugPrint('❌ Error al construir App: $e');
+        debugPrint('Stack trace: $stackTrace');
       }
       
       return MaterialApp(
@@ -91,34 +103,50 @@ Future<void> initApp() async {
   try {
     // Inicializar almacenamiento primero (crítico)
     if (kDebugMode) {
-      print('💾 Inicializando StorageService...');
+      debugPrint('💾 Inicializando StorageService...');
     }
     await StorageService.init();
     if (kDebugMode) {
-      print('✅ StorageService inicializado');
+      debugPrint('✅ StorageService inicializado');
+    }
+
+    // Inicializar caché Hive
+    if (kDebugMode) {
+      debugPrint('💾 Inicializando HiveCacheService...');
+    }
+    try {
+      await HiveCacheService.init();
+      if (kDebugMode) {
+        debugPrint('✅ HiveCacheService inicializado');
+      }
+    } catch (e) {
+      // Si falla el caché, continuar sin él
+      if (kDebugMode) {
+        debugPrint('⚠️ Error al inicializar HiveCacheService: $e');
+      }
     }
   } catch (e) {
     // Si falla el almacenamiento, la app no puede funcionar
     // Pero intentamos continuar para que el usuario vea el error
     if (kDebugMode) {
-      print('❌ Error al inicializar StorageService: $e');
+      debugPrint('❌ Error al inicializar StorageService: $e');
     }
   }
   
   try {
     // Inicializar API service (puede fallar si no hay conexión, pero no crítico para iniciar)
     if (kDebugMode) {
-      print('🌐 Inicializando ApiService...');
+      debugPrint('🌐 Inicializando ApiService...');
     }
     await ApiService.init();
     if (kDebugMode) {
-      print('✅ ApiService inicializado');
+      debugPrint('✅ ApiService inicializado');
     }
   } catch (e) {
     // Si falla la API, la app puede iniciar pero no podrá hacer requests
     // Esto es aceptable para que el usuario pueda configurar la URL
     if (kDebugMode) {
-      print('⚠️ Error al inicializar ApiService: $e');
+      debugPrint('⚠️ Error al inicializar ApiService: $e');
     }
   }
 }

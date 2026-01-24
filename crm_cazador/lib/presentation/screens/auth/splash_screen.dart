@@ -36,7 +36,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       
       // Si aún está cargando después del timeout, continuar de todas formas
       if (authNotifier.currentState.isLoading) {
-        print('Timeout esperando autenticación, continuando...');
+        debugPrint('Timeout esperando autenticación, continuando...');
       }
       
       // Esperar un poco más para asegurar que el estado se propague
@@ -56,7 +56,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       }
     } catch (e) {
       // Si hay un error, ir a login de todas formas
-      print('Error en _checkAuth: $e');
+      debugPrint('Error en _checkAuth: $e');
       if (mounted) {
         context.go('/login');
       }

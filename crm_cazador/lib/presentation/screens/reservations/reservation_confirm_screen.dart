@@ -221,7 +221,7 @@ class _ReservationConfirmScreenState
             await unitsNotifier.loadUnits(refresh: true);
           } catch (e) {
             // Si el provider no existe (no está siendo usado), solo invalidamos el caché
-            print('⚠️ [ReservationConfirm] Provider de unidades no disponible: $e');
+            debugPrint('⚠️ [ReservationConfirm] Provider de unidades no disponible: $e');
           }
         }
         

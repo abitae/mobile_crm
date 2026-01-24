@@ -24,8 +24,9 @@ class ClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return AnimatedCard(
-      child: Card(
+    return RepaintBoundary(
+      child: AnimatedCard(
+        child: Card(
         elevation: 4,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -207,6 +208,7 @@ class ClientCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

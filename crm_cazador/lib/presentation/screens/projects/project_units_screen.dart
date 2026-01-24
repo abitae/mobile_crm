@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/project_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
@@ -78,7 +79,6 @@ class _UnitsListWidget extends ConsumerStatefulWidget {
 
 class _UnitsListWidgetState extends ConsumerState<_UnitsListWidget> {
   final _scrollController = ScrollController();
-  ProjectUnitsState? _lastState;
 
   @override
   void initState() {
@@ -103,24 +103,9 @@ class _UnitsListWidgetState extends ConsumerState<_UnitsListWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Observar el notifier para que el widget se reconstruya cuando cambie
+    // Observar el notifier - Riverpod maneja la reactividad automáticamente
     final unitsNotifier = ref.watch(projectUnitsNotifierProvider(widget.projectId));
-    // Acceder al estado actual
     final state = unitsNotifier.currentState;
-    
-    // Debug: verificar el estado
-    print('🔄 [ProjectUnitsScreen] Building with ${state.units.length} units, isLoading=${state.isLoading}, error=${state.error}');
-    
-    // Forzar rebuild si el estado cambió usando un enfoque más directo
-    if (_lastState != state) {
-      _lastState = state;
-      // Usar un post-frame callback para forzar rebuild
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {});
-        }
-      });
-    }
 
     // Mostrar loading solo si no hay unidades y está cargando
     if (state.isLoading && state.units.isEmpty) {
@@ -186,7 +171,7 @@ class _UnitsListWidgetState extends ConsumerState<_UnitsListWidget> {
               key: ValueKey('unit-${unit.id}'),
               unit: unit,
               onTap: () {
-                // TODO: Navegar a detalle de unidad si se implementa
+                context.push('/projects/${widget.projectId}/units/${unit.id}');
               },
             );
           },

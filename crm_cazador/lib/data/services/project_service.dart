@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../models/project_model.dart';
@@ -231,7 +232,7 @@ class ProjectService {
             } catch (e) {
               // Log error solo en desarrollo, continuar con las demás unidades
               if (const bool.fromEnvironment('dart.vm.product') == false) {
-                print('⚠️ [ProjectService] Error al parsear unidad: $e');
+                debugPrint('⚠️ [ProjectService] Error al parsear unidad: $e');
               }
               return null;
             }

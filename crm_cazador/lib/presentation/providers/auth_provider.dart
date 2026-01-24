@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:state_notifier/state_notifier.dart';
 import '../../../data/services/auth_service.dart';
@@ -68,7 +69,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         } catch (e) {
           // Si falla al obtener el usuario (API no disponible, token inválido, etc.)
           // Limpiar tokens y marcar como no autenticado
-          print('Error al obtener usuario: $e');
+          debugPrint('Error al obtener usuario: $e');
           try {
             await AuthService.logout();
           } catch (_) {
@@ -88,7 +89,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       // Error general, marcar como no autenticado
-      print('Error en _checkAuth: $e');
+      debugPrint('Error en _checkAuth: $e');
       state = state.copyWith(
         isAuthenticated: false,
         isLoading: false,
@@ -157,12 +158,12 @@ final authNotifierProvider = Provider<AuthNotifier>((ref) {
       try {
         notifier.dispose();
       } catch (e) {
-        print('Error al hacer dispose de AuthNotifier: $e');
+        debugPrint('Error al hacer dispose de AuthNotifier: $e');
       }
     });
     return notifier;
   } catch (e) {
-    print('Error al crear AuthNotifier: $e');
+    debugPrint('Error al crear AuthNotifier: $e');
     // Retornar un notifier básico en caso de error
     return AuthNotifier();
   }

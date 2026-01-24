@@ -19,8 +19,9 @@ class ProjectCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return AnimatedCard(
-      child: Card(
+    return RepaintBoundary(
+      child: AnimatedCard(
+        child: Card(
         elevation: 4,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
@@ -233,6 +234,7 @@ class ProjectCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }
