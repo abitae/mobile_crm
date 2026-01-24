@@ -250,6 +250,8 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
 
       if (widget.clientId != null) {
         await ClientService.updateClient(widget.clientId!, client);
+        // Invalidar el provider del cliente específico para refrescar su detalle
+        ref.invalidate(clientProvider(widget.clientId!));
       } else {
         await ClientService.createClient(client);
       }
@@ -262,7 +264,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                 : 'Cliente creado'),
           ),
         );
-        // Recargar la lista de clientes
+        // Recargar la lista de clientes de forma reactiva
         ref.read(clientsNotifierProvider).loadClients(refresh: true);
         context.pop();
       }

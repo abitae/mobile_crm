@@ -15,6 +15,7 @@ class ClientService {
     String? status,
     String? type,
     String? source,
+    String? createType,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -33,6 +34,9 @@ class ClientService {
       }
       if (source != null && source.isNotEmpty) {
         queryParams['source'] = source;
+      }
+      if (createType != null && createType.isNotEmpty) {
+        queryParams['create_type'] = createType;
       }
 
       final response = await ApiService.get(

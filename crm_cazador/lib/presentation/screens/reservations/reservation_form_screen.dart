@@ -4,19 +4,27 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../providers/reservation_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/client_provider.dart';
+import '../../providers/project_provider.dart';
 import '../../../data/services/reservation_service.dart';
 import '../../../data/services/project_service.dart';
 import '../../../data/models/reservation_model.dart';
 import '../../../data/models/client_model.dart';
 import '../../../data/models/project_model.dart';
 import '../../../data/models/unit_model.dart';
+import '../../../data/services/client_service.dart';
 import '../../../core/exceptions/api_exception.dart';
 
 /// Pantalla de formulario de reserva (crear/editar)
 class ReservationFormScreen extends ConsumerStatefulWidget {
   final int? reservationId;
+  final int? preSelectedClientId;
 
-  const ReservationFormScreen({super.key, this.reservationId});
+  const ReservationFormScreen({
+    super.key,
+    this.reservationId,
+    this.preSelectedClientId,
+  });
 
   @override
   ConsumerState<ReservationFormScreen> createState() =>
@@ -50,8 +58,30 @@ class _ReservationFormScreenState
     _reservationDate = DateTime.now();
     if (widget.reservationId != null) {
       _loadReservation();
+    } else if (widget.preSelectedClientId != null) {
+      _loadPreSelectedClient();
     } else {
       _isInitialized = true;
+    }
+  }
+
+  Future<void> _loadPreSelectedClient() async {
+    try {
+      final client = await ClientService.getClient(widget.preSelectedClientId!);
+      setState(() {
+        _selectedClientId = client.id;
+        _selectedClientName = client.name;
+        _isInitialized = true;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar cliente: $e')),
+        );
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     }
   }
 
@@ -229,7 +259,31 @@ class _ReservationFormScreenState
         }
       }
 
+      // Invalidar provider de reserva específica si se editó
+      if (widget.reservationId != null) {
+        ref.invalidate(reservationProvider(widget.reservationId!));
+      }
+      
+      // Refrescar lista de reservas de forma reactiva
       ref.read(reservationsNotifierProvider).refreshReservations();
+      
+      // Invalidar provider del proyecto relacionado para actualizar unidades disponibles
+      if (_selectedProjectId != null) {
+        ref.invalidate(projectProvider(_selectedProjectId!));
+        // Invalidar caché de unidades del proyecto
+        ProjectService.invalidateUnitsCache(_selectedProjectId!);
+      }
+      
+      // Si se creó desde un cliente, refrescar también el detalle del cliente
+      if (widget.preSelectedClientId != null || _selectedClientId != null) {
+        final clientId = widget.preSelectedClientId ?? _selectedClientId;
+        if (clientId != null) {
+          ref.invalidate(clientProvider(clientId));
+          // También refrescar la lista de clientes para actualizar contadores
+          ref.read(clientsNotifierProvider).loadClients(refresh: true);
+        }
+      }
+      
       if (mounted) {
         context.pop();
       }

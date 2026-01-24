@@ -139,8 +139,13 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
         );
       }
 
-      // Refrescar listado
+      // Refrescar listado de forma reactiva
       ref.read(daterosNotifierProvider).loadDateros(refresh: true);
+      
+      // Si se editó un datero, invalidar su provider específico
+      if (widget.dateroId != null) {
+        ref.invalidate(dateroProvider(widget.dateroId!));
+      }
 
       if (mounted) {
         context.pop();

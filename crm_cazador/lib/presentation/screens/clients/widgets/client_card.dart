@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../../../data/models/client_model.dart';
 import '../../../theme/app_colors.dart';
@@ -40,6 +41,7 @@ class ClientCard extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
+            onLongPress: () => _showContextMenu(context),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -229,16 +231,49 @@ class ClientCard extends StatelessWidget {
     }
   }
 
-  String _getCreateTypeLabel(String? createType) {
-    if (createType == null) return '';
-    switch (createType.toLowerCase()) {
-      case 'datero':
-        return 'Datero';
-      case 'propio':
-        return 'Propio';
-      default:
-        return createType;
-    }
+  void _showContextMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(client.name),
+              subtitle: Text('${client.documentType}: ${client.documentNumber}'),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.event_note),
+              title: const Text('Crear Actividad'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push(
+                  '/clients/${client.id}/activities/new?clientName=${Uri.encodeComponent(client.name)}',
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long),
+              title: const Text('Crear Reserva'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/reservations/new?clientId=${client.id}');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Editar Cliente'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/clients/${client.id}/edit');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

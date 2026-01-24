@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../projects/projects_list_screen.dart';
 import '../clients/clients_list_screen.dart';
 import '../reservations/reservations_list_screen.dart';
@@ -38,6 +39,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
       parent: _animationController,
       curve: Curves.easeOut,
     );
+    // Iniciar la animación inmediatamente para que el contenido sea visible
+    _animationController.forward();
+    // Cargar datos iniciales del dashboard
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshDataForIndex(0);
+    });
   }
 
   @override
@@ -62,24 +69,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
           ),
         ],
       ),
-      body: FadeTransition(
-        opacity: _animation,
-        child: PageView(
-          controller: _pageController,
-          onPageChanged: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-            _refreshDataForIndex(index);
-          },
-          children: [
-            _buildHomeContent(),
-            const ClientsListScreen(),
-            const DaterosListScreen(),
-            const ProjectsListScreen(),
-            const ReservationsListScreen(),
-          ],
-        ),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          _animationController.forward(from: 0.0);
+          _refreshDataForIndex(index);
+        },
+        children: [
+          FadeTransition(
+            opacity: _animation,
+            child: _buildHomeContent(),
+          ),
+          const ClientsListScreen(),
+          const DaterosListScreen(),
+          const ProjectsListScreen(),
+          const ReservationsListScreen(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -130,7 +138,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
   void _refreshDataForIndex(int index) {
     switch (index) {
       case 0:
-        // Home - No hay datos que refrescar
+        // Home - Refrescar todos los datos del dashboard para mantenerlo actualizado
+        ref.read(clientsNotifierProvider).loadClients(refresh: true);
+        ref.read(daterosNotifierProvider).loadDateros(refresh: true);
+        ref.read(projectsNotifierProvider).loadProjects(refresh: true);
+        ref.read(reservationsNotifierProvider).loadReservations(refresh: true);
         break;
       case 1:
         // Clientes
@@ -208,6 +220,166 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            // Dashboard de estadísticas
+            _DashboardWidget(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardWidget extends ConsumerWidget {
+  const _DashboardWidget();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final clientsState = ref.watch(clientsNotifierProvider).currentState;
+    final daterosState = ref.watch(daterosNotifierProvider).currentState;
+    final projectsState = ref.watch(projectsNotifierProvider).currentState;
+    final reservationsState = ref.watch(reservationsNotifierProvider).currentState;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Resumen',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Column(
+          children: [
+            _DashboardCard(
+              title: 'Clientes',
+              value: clientsState.clients.length.toString(),
+              iconPath: 'assets/images/icon_clients.svg',
+              color: colorScheme.primary,
+              isLoading: clientsState.isLoading,
+            ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              title: 'Dateros',
+              value: daterosState.dateros.length.toString(),
+              iconPath: 'assets/images/icon_dateros.svg',
+              color: colorScheme.secondary,
+              isLoading: daterosState.isLoading,
+            ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              title: 'Proyectos',
+              value: projectsState.projects.length.toString(),
+              iconPath: 'assets/images/icon_projects.svg',
+              color: colorScheme.tertiary,
+              isLoading: projectsState.isLoading,
+            ),
+            const SizedBox(height: 12),
+            _DashboardCard(
+              title: 'Reservas',
+              value: reservationsState.reservations.length.toString(),
+              iconPath: 'assets/images/icon_reservations.svg',
+              color: colorScheme.error,
+              isLoading: reservationsState.isLoading,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String iconPath;
+  final Color color;
+  final bool isLoading;
+
+  const _DashboardCard({
+    required this.title,
+    required this.value,
+    required this.iconPath,
+    required this.color,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withOpacity(0.1),
+              color.withOpacity(0.05),
+            ],
+          ),
+        ),
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: SvgPicture.asset(
+                iconPath,
+                width: 32,
+                height: 32,
+                colorFilter: ColorFilter.mode(
+                  color,
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    value,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isLoading)
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
           ],
         ),
       ),

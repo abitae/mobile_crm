@@ -27,6 +27,10 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Listener para actualizar el UI cuando cambia el texto
+    _searchController.addListener(() {
+      setState(() {}); // Reconstruir para actualizar el suffixIcon
+    });
   }
 
   @override
@@ -47,15 +51,6 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     }
   }
 
-  void _handleSearch(String query) {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (_searchController.text == query) {
-        ref.read(clientsNotifierProvider).setSearch(
-              query.isEmpty ? null : query,
-            );
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,30 +74,74 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
           // Search bar with Material 3 styling
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Buscar clientes',
-                hintText: 'Nombre, documento, teléfono...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(clientsNotifierProvider).setSearch(null);
-                        },
-                      )
-                    : null,
-                filled: true,
-              ),
-              onChanged: _handleSearch,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Buscar clientes',
+                      hintText: 'Nombre, documento, teléfono...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                // Actualizar búsqueda para mostrar todos los clientes
+                                ref.read(clientsNotifierProvider).setSearch(null);
+                                // Ocultar teclado
+                                FocusScope.of(context).unfocus();
+                              },
+                            )
+                          : null,
+                      filled: true,
+                    ),
+                    onChanged: (value) {
+                      // Actualizar inmediatamente si está vacío para mostrar todos los clientes
+                      if (value.isEmpty || value.trim().isEmpty) {
+                        ref.read(clientsNotifierProvider).setSearch(null);
+                      }
+                    },
+                    onSubmitted: (value) {
+                      final searchText = value.trim();
+                      ref.read(clientsNotifierProvider).setSearch(
+                            searchText.isEmpty ? null : searchText,
+                          );
+                      // Ocultar teclado después de buscar
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () {
+                    // Obtener el texto y limpiar espacios
+                    final searchText = _searchController.text.trim();
+                    
+                    // Aplicar búsqueda
+                    ref.read(clientsNotifierProvider).setSearch(
+                          searchText.isEmpty ? null : searchText,
+                        );
+                    
+                    // Ocultar teclado después de buscar
+                    FocusScope.of(context).unfocus();
+                  },
+                  icon: const Icon(Icons.search, size: 20),
+                  label: const Text('Buscar'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    minimumSize: const Size(0, 56), // Altura mínima para coincidir con el TextField
+                  ),
+                ),
+              ],
             ),
           ),
           // Active filters chips
           if (clientsState.statusFilter != null ||
               clientsState.typeFilter != null ||
-              clientsState.sourceFilter != null)
+              clientsState.sourceFilter != null ||
+              clientsState.createTypeFilter != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Wrap(
@@ -153,6 +192,21 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
                             );
                       },
                     ),
+                  if (clientsState.createTypeFilter != null)
+                    FilterChip(
+                      label: Text(_getCreateTypeLabel(clientsState.createTypeFilter!)),
+                      onSelected: (_) {
+                        ref.read(clientsNotifierProvider).setFilters(
+                              createType: null,
+                            );
+                      },
+                      deleteIcon: const Icon(Icons.close, size: 18),
+                      onDeleted: () {
+                        ref.read(clientsNotifierProvider).setFilters(
+                              createType: null,
+                            );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -187,11 +241,12 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
       builder: (context) => _FilterBottomSheet(
         clientsState: clientsState,
         optionsAsync: optionsAsync,
-        onApply: (status, type, source) {
+        onApply: (status, type, source, createType) {
           ref.read(clientsNotifierProvider).setFilters(
                 status: status,
                 type: type,
                 source: source,
+                createType: createType,
               );
         },
         onClear: () {
@@ -231,6 +286,14 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
       'publicidad': 'Publicidad',
     };
     return labels[source] ?? source;
+  }
+
+  String _getCreateTypeLabel(String createType) {
+    final labels = {
+      'propio': 'Propio',
+      'datero': 'Dateado',
+    };
+    return labels[createType] ?? createType;
   }
 
   Widget _buildBody(ClientsState state) {
@@ -291,7 +354,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 class _FilterBottomSheet extends ConsumerStatefulWidget {
   final ClientsState clientsState;
   final AsyncValue<ClientOptions> optionsAsync;
-  final void Function(String? status, String? type, String? source) onApply;
+  final void Function(String? status, String? type, String? source, String? createType) onApply;
   final VoidCallback onClear;
 
   const _FilterBottomSheet({
@@ -309,6 +372,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
   late String? _selectedStatus;
   late String? _selectedType;
   late String? _selectedSource;
+  late String? _selectedCreateType;
 
   @override
   void initState() {
@@ -316,6 +380,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
     _selectedStatus = widget.clientsState.statusFilter;
     _selectedType = widget.clientsState.typeFilter;
     _selectedSource = widget.clientsState.sourceFilter;
+    _selectedCreateType = widget.clientsState.createTypeFilter;
   }
 
   @override
@@ -345,77 +410,146 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            // Filtro de Estado
-            DropdownButtonFormField<String>(
-              value: _selectedStatus,
-              decoration: const InputDecoration(
-                labelText: 'Estado',
-                prefixIcon: Icon(Icons.flag_outlined),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Todos los estados'),
-                ),
-                ...options.statusesList.map((status) => DropdownMenuItem<String>(
-                      value: status,
-                      child: Text(options.getStatusLabel(status)),
-                    )),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedStatus = value;
-                });
-              },
-            ),
             const SizedBox(height: 16),
-            // Filtro de Tipo
-            DropdownButtonFormField<String>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Tipo de Cliente',
-                prefixIcon: Icon(Icons.category_outlined),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Todos los tipos'),
-                ),
-                ...options.clientTypesList.map((type) => DropdownMenuItem<String>(
-                      value: type,
-                      child: Text(options.getClientTypeLabel(type)),
-                    )),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedType = value;
-                });
-              },
+            // Filtro de Estado con chips
+            Text(
+              'Estado',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
-            const SizedBox(height: 16),
-            // Filtro de Origen
-            DropdownButtonFormField<String>(
-              value: _selectedSource,
-              decoration: const InputDecoration(
-                labelText: 'Origen',
-                prefixIcon: Icon(Icons.place_outlined),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Todos los orígenes'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _selectedStatus == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedStatus = null;
+                    });
+                  },
                 ),
-                ...options.sourcesList.map((source) => DropdownMenuItem<String>(
-                      value: source,
-                      child: Text(options.getSourceLabel(source)),
+                ...options.statusesList.map((status) => ChoiceChip(
+                      label: Text(options.getStatusLabel(status)),
+                      selected: _selectedStatus == status,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedStatus = _selectedStatus == status ? null : status;
+                        });
+                      },
                     )),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedSource = value;
-                });
-              },
+            ),
+            const SizedBox(height: 20),
+            // Filtro de Tipo con chips
+            Text(
+              'Tipo de Cliente',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _selectedType == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedType = null;
+                    });
+                  },
+                ),
+                ...options.clientTypesList.map((type) => ChoiceChip(
+                      label: Text(options.getClientTypeLabel(type)),
+                      selected: _selectedType == type,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedType = _selectedType == type ? null : type;
+                        });
+                      },
+                    )),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Filtro de Origen con chips
+            Text(
+              'Origen',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _selectedSource == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedSource = null;
+                    });
+                  },
+                ),
+                ...options.sourcesList.map((source) => ChoiceChip(
+                      label: Text(options.getSourceLabel(source)),
+                      selected: _selectedSource == source,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedSource = _selectedSource == source ? null : source;
+                        });
+                      },
+                    )),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Filtro de Tipo de Creación con chips
+            Text(
+              'Tipo de Creación',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _selectedCreateType == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedCreateType = null;
+                    });
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Propio'),
+                  selected: _selectedCreateType == 'propio',
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedCreateType = _selectedCreateType == 'propio' ? null : 'propio';
+                    });
+                  },
+                ),
+                ChoiceChip(
+                  label: const Text('Dateado'),
+                  selected: _selectedCreateType == 'datero',
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedCreateType = _selectedCreateType == 'datero' ? null : 'datero';
+                    });
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -433,7 +567,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
                 Expanded(
                   child: FilledButton(
                     onPressed: () {
-                      widget.onApply(_selectedStatus, _selectedType, _selectedSource);
+                      widget.onApply(_selectedStatus, _selectedType, _selectedSource, _selectedCreateType);
                       Navigator.pop(context);
                     },
                     child: const Text('Aplicar'),

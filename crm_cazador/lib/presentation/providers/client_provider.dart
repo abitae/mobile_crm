@@ -18,6 +18,7 @@ class ClientsState {
   final String? statusFilter;
   final String? typeFilter;
   final String? sourceFilter;
+  final String? createTypeFilter; // propio o datero
 
   ClientsState({
     List<ClientModel>? clients,
@@ -31,6 +32,7 @@ class ClientsState {
     this.statusFilter,
     this.typeFilter,
     this.sourceFilter,
+    this.createTypeFilter,
   })  : clients = clients ?? const [],
         isLoading = isLoading ?? false,
         isLoadingMore = isLoadingMore ?? false,
@@ -50,6 +52,7 @@ class ClientsState {
     String? statusFilter,
     String? typeFilter,
     String? sourceFilter,
+    String? createTypeFilter,
   }) {
     return ClientsState(
       clients: clients ?? this.clients,
@@ -63,6 +66,7 @@ class ClientsState {
       statusFilter: statusFilter ?? this.statusFilter,
       typeFilter: typeFilter ?? this.typeFilter,
       sourceFilter: sourceFilter ?? this.sourceFilter,
+      createTypeFilter: createTypeFilter ?? this.createTypeFilter,
     );
   }
 }
@@ -92,6 +96,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         status: state.statusFilter,
         type: state.typeFilter,
         source: state.sourceFilter,
+        createType: state.createTypeFilter,
       );
 
       // Prevenir duplicados: si no es refresh, filtrar clientes que ya existen
@@ -139,6 +144,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         status: state.statusFilter,
         type: state.typeFilter,
         source: state.sourceFilter,
+        createType: state.createTypeFilter,
       );
 
       // Prevenir duplicados: filtrar clientes que ya existen
@@ -176,11 +182,13 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
     String? status,
     String? type,
     String? source,
+    String? createType,
   }) {
     state = state.copyWith(
       statusFilter: status,
       typeFilter: type,
       sourceFilter: source,
+      createTypeFilter: createType,
       currentPage: 1,
     );
     loadClients(refresh: true);
@@ -193,6 +201,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
       statusFilter: null,
       typeFilter: null,
       sourceFilter: null,
+      createTypeFilter: null,
       currentPage: 1,
     );
     loadClients(refresh: true);

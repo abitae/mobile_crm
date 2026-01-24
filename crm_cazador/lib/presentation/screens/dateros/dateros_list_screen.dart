@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ class DaterosListScreen extends ConsumerStatefulWidget {
 class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
+  Timer? _searchTimer;
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
 
   @override
   void dispose() {
+    _searchTimer?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -47,11 +50,19 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
   }
 
   void _handleSearch(String query) {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (_searchController.text == query) {
-        ref.read(daterosNotifierProvider).setSearch(
-              query.isEmpty ? null : query,
-            );
+    // Cancelar timer anterior si existe
+    _searchTimer?.cancel();
+
+    // Si la búsqueda está vacía, buscar inmediatamente
+    if (query.isEmpty) {
+      ref.read(daterosNotifierProvider).setSearch(null);
+      return;
+    }
+
+    // Crear nuevo timer con debounce de 300ms
+    _searchTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted && _searchController.text == query) {
+        ref.read(daterosNotifierProvider).setSearch(query);
       }
     });
   }
@@ -64,34 +75,12 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
       appBar: AppBar(
         title: const Text('Dateros'),
         actions: [
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.filter_list_outlined),
-            onSelected: (value) {
-              if (value == 'all') {
-                ref.read(daterosNotifierProvider).setIsActiveFilter(null);
-              } else if (value == 'active') {
-                ref.read(daterosNotifierProvider).setIsActiveFilter(true);
-              } else if (value == 'inactive') {
-                ref.read(daterosNotifierProvider).setIsActiveFilter(false);
-              }
+            onPressed: () {
+              _showFilterBottomSheet(context);
             },
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem(
-                value: 'all',
-                checked: daterosState.isActiveFilter == null,
-                child: const Text('Todos'),
-              ),
-              CheckedPopupMenuItem(
-                value: 'active',
-                checked: daterosState.isActiveFilter == true,
-                child: const Text('Activos'),
-              ),
-              CheckedPopupMenuItem(
-                value: 'inactive',
-                checked: daterosState.isActiveFilter == false,
-                child: const Text('Inactivos'),
-              ),
-            ],
+            tooltip: 'Filtros',
           ),
         ],
       ),
@@ -119,6 +108,28 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
               onChanged: _handleSearch,
             ),
           ),
+          // Active filters chips
+          if (daterosState.isActiveFilter != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(
+                    label: Text(
+                      daterosState.isActiveFilter == true ? 'Activos' : 'Inactivos',
+                    ),
+                    onSelected: (_) {
+                      ref.read(daterosNotifierProvider).setIsActiveFilter(null);
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 18),
+                    onDeleted: () {
+                      ref.read(daterosNotifierProvider).setIsActiveFilter(null);
+                    },
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -192,6 +203,146 @@ class _DaterosListScreenState extends ConsumerState<DaterosListScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showFilterBottomSheet(BuildContext context) {
+    final daterosState = ref.read(daterosNotifierProvider).currentState;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => _FilterBottomSheet(
+        daterosState: daterosState,
+        onApply: (isActive) {
+          ref.read(daterosNotifierProvider).setIsActiveFilter(isActive);
+        },
+        onClear: () {
+          ref.read(daterosNotifierProvider).setIsActiveFilter(null);
+        },
+      ),
+    );
+  }
+}
+
+/// Widget para el bottom sheet de filtros de dateros
+class _FilterBottomSheet extends StatefulWidget {
+  final DaterosState daterosState;
+  final void Function(bool?) onApply;
+  final VoidCallback onClear;
+
+  const _FilterBottomSheet({
+    required this.daterosState,
+    required this.onApply,
+    required this.onClear,
+  });
+
+  @override
+  State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<_FilterBottomSheet> {
+  late bool? _selectedIsActive;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIsActive = widget.daterosState.isActiveFilter;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Filtros',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Filtro de Estado con chips
+          Text(
+            'Estado',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Todos'),
+                selected: _selectedIsActive == null,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedIsActive = null;
+                  });
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Activos'),
+                selected: _selectedIsActive == true,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedIsActive = _selectedIsActive == true ? null : true;
+                  });
+                },
+              ),
+              ChoiceChip(
+                label: const Text('Inactivos'),
+                selected: _selectedIsActive == false,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedIsActive = _selectedIsActive == false ? null : false;
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    widget.onClear();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Limpiar'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    widget.onApply(_selectedIsActive);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Aplicar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

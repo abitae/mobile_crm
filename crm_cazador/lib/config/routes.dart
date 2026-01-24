@@ -11,6 +11,7 @@ import '../../presentation/screens/clients/clients_list_screen.dart';
 import '../../presentation/screens/clients/client_detail_screen.dart';
 import '../../presentation/screens/clients/client_form_screen.dart';
 import '../../presentation/screens/clients/client_select_screen.dart';
+import '../../presentation/screens/clients/activity_form_screen.dart';
 import '../../presentation/screens/reservations/reservations_list_screen.dart';
 import '../../presentation/screens/reservations/reservation_detail_screen.dart';
 import '../../presentation/screens/reservations/reservation_form_screen.dart';
@@ -183,6 +184,19 @@ final routesProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/clients/:id/activities/new',
+        name: 'client-activity-new',
+        pageBuilder: (context, state) {
+          final id = int.parse(state.pathParameters['id']!);
+          final clientName = state.uri.queryParameters['clientName'];
+          return _buildPageWithTransition(
+            ActivityFormScreen(clientId: id, clientName: clientName),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
+        },
+      ),
+      GoRoute(
         path: '/reservations',
         name: 'reservations',
         pageBuilder: (context, state) => _buildPageWithTransition(
@@ -194,11 +208,15 @@ final routesProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reservations/new',
         name: 'reservation-new',
-        pageBuilder: (context, state) => _buildPageWithTransition(
-          const ReservationFormScreen(),
-          state,
-          transitionType: TransitionType.slideUp,
-        ),
+        pageBuilder: (context, state) {
+          final clientIdParam = state.uri.queryParameters['clientId'];
+          final clientId = clientIdParam != null ? int.tryParse(clientIdParam) : null;
+          return _buildPageWithTransition(
+            ReservationFormScreen(preSelectedClientId: clientId),
+            state,
+            transitionType: TransitionType.slideUp,
+          );
+        },
       ),
       GoRoute(
         path: '/reservations/:id',

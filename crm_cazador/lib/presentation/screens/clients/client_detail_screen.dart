@@ -89,7 +89,10 @@ class ClientDetailScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
+        // Invalidar provider del cliente para refrescar su detalle
         ref.invalidate(clientProvider(clientId));
+        // También refrescar la lista de clientes para mantener sincronización
+        ref.read(clientsNotifierProvider).loadClients(refresh: true);
       },
       child: CustomScrollView(
         slivers: [
@@ -160,19 +163,39 @@ class ClientDetailScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Botón de editar prominente
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        context.push('/clients/$clientId/edit');
-                      },
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Editar Cliente'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                  // Acciones rápidas
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '/reservations/new?clientId=$clientId',
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long),
+                          label: const Text('Nueva Reserva'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.push(
+                              '/clients/$clientId/activities/new?clientName=${Uri.encodeComponent(client.name)}',
+                            );
+                          },
+                          icon: const Icon(Icons.event_note),
+                          label: const Text('Nueva Actividad'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -719,7 +742,10 @@ class ClientDetailScreen extends ConsumerWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Cliente eliminado')),
                   );
-                  ref.invalidate(clientsNotifierProvider);
+                  // Invalidar provider del cliente específico
+                  ref.invalidate(clientProvider(client.id!));
+                  // Refrescar lista de clientes de forma reactiva
+                  ref.read(clientsNotifierProvider).loadClients(refresh: true);
                   if (context.mounted) {
                     context.pop();
                   }
