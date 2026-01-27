@@ -1,18 +1,22 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/client_provider.dart';
 import '../../../data/services/client_service.dart';
+import '../../../data/services/activity_service.dart';
+import '../../../data/services/reservation_service.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/skeletons/client_detail_skeleton.dart';
 import '../../../data/models/client_model.dart' as models;
+import '../../../data/models/activity_model.dart';
+import '../../../data/models/reservation_model.dart';
 import '../../../core/exceptions/api_exception.dart';
 
 /// Pantalla de detalle de cliente
-class ClientDetailScreen extends ConsumerWidget {
+class ClientDetailScreen extends ConsumerStatefulWidget {
   final int clientId;
 
   const ClientDetailScreen({
@@ -21,19 +25,147 @@ class ClientDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final clientAsync = ref.watch(clientProvider(clientId));
+  ConsumerState<ClientDetailScreen> createState() => _ClientDetailScreenState();
+}
+
+class _ClientDetailScreenState extends ConsumerState<ClientDetailScreen> {
+  List<ActivityModel>? _activities;
+  List<ReservationModel>? _reservations;
+  bool _isLoadingActivities = false;
+  bool _isLoadingReservations = false;
+  String? _activitiesError;
+  String? _reservationsError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    debugPrint('🔵 [ClientDetail] Iniciando carga de datos para cliente ID: ${widget.clientId}');
+    _loadActivities();
+    _loadReservations();
+  }
+
+  Future<void> _loadActivities() async {
+    debugPrint('📋 [ClientDetail] Iniciando carga de actividades para cliente ID: ${widget.clientId}');
+    setState(() {
+      _isLoadingActivities = true;
+      _activitiesError = null;
+    });
+
+    try {
+      debugPrint('📋 [ClientDetail] Llamando a ActivityService.getClientActivitiesList(${widget.clientId}, perPage: 100)');
+      final response = await ActivityService.getClientActivitiesList(
+        widget.clientId,
+        perPage: 100,
+      );
+      final activities = response.data;
+      debugPrint('✅ [ClientDetail] Actividades recibidas: ${activities.length}');
+      debugPrint('📊 [ClientDetail] Paginación - Total: ${response.totalItems}, Página: ${response.currentPage}');
+      
+      if (activities.isNotEmpty) {
+        debugPrint('📋 [ClientDetail] Primera actividad:');
+        debugPrint('   - ID: ${activities.first.id}');
+        debugPrint('   - Título: ${activities.first.title}');
+        debugPrint('   - Tipo: ${activities.first.activityType}');
+        debugPrint('   - Descripción: ${activities.first.description}');
+        debugPrint('   - Fecha/Hora: ${activities.first.startDate}');
+        debugPrint('   - Notas: ${activities.first.notes}');
+        debugPrint('   - Estado: ${activities.first.status}');
+        debugPrint('   - Client ID: ${activities.first.clientId}');
+      } else {
+        debugPrint('⚠️ [ClientDetail] No se recibieron actividades (lista vacía)');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _activities = activities;
+          _isLoadingActivities = false;
+        });
+        debugPrint('✅ [ClientDetail] Estado actualizado: ${activities.length} actividades');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ [ClientDetail] Error al cargar actividades: $e');
+      debugPrint('❌ [ClientDetail] StackTrace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _activitiesError = e.toString();
+          _isLoadingActivities = false;
+        });
+        debugPrint('❌ [ClientDetail] Error guardado en estado: $_activitiesError');
+      }
+    }
+  }
+
+  Future<void> _loadReservations() async {
+    debugPrint('🎫 [ClientDetail] Iniciando carga de reservas para cliente ID: ${widget.clientId}');
+    setState(() {
+      _isLoadingReservations = true;
+      _reservationsError = null;
+    });
+
+    try {
+      debugPrint('🎫 [ClientDetail] Llamando a ReservationService.getReservations(clientId: ${widget.clientId}, perPage: 100)');
+      final response = await ReservationService.getReservations(
+        clientId: widget.clientId,
+        perPage: 100,
+      );
+      debugPrint('✅ [ClientDetail] Reservas recibidas: ${response.data.length}');
+      debugPrint('📊 [ClientDetail] Paginación - Total: ${response.totalItems}, Página actual: ${response.currentPage}');
+      
+      if (response.data.isNotEmpty) {
+        debugPrint('🎫 [ClientDetail] Primera reserva:');
+        debugPrint('   - ID: ${response.data.first.id}');
+        debugPrint('   - Número: ${response.data.first.reservationNumber}');
+        debugPrint('   - Estado: ${response.data.first.status}');
+        debugPrint('   - Fecha: ${response.data.first.reservationDate}');
+        debugPrint('   - Monto: ${response.data.first.reservationAmount}');
+        debugPrint('   - Proyecto: ${response.data.first.project?.name ?? "N/A"}');
+        debugPrint('   - Unidad: ${response.data.first.unit?.fullIdentifier ?? response.data.first.unit?.unitNumber ?? "N/A"}');
+      } else {
+        debugPrint('⚠️ [ClientDetail] No se recibieron reservas (lista vacía)');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _reservations = response.data;
+          _isLoadingReservations = false;
+        });
+        debugPrint('✅ [ClientDetail] Estado actualizado: ${response.data.length} reservas');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ [ClientDetail] Error al cargar reservas: $e');
+      debugPrint('❌ [ClientDetail] StackTrace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _reservationsError = e.toString();
+          _isLoadingReservations = false;
+        });
+        debugPrint('❌ [ClientDetail] Error guardado en estado: $_reservationsError');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clientAsync = ref.watch(clientProvider(widget.clientId));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detalle de Cliente'),
+        title: clientAsync.when(
+          data: (client) => Text(client.name),
+          loading: () => const Text('Detalle de Cliente'),
+          error: (_, __) => const Text('Detalle de Cliente'),
+        ),
         actions: [
           clientAsync.when(
             data: (client) => PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
                 if (value == 'edit') {
-                  context.push('/clients/$clientId/edit');
+                  context.push('/clients/${widget.clientId}/edit');
                 } else if (value == 'delete') {
                   _showDeleteDialog(context, ref, client);
                 }
@@ -72,7 +204,7 @@ class ClientDetailScreen extends ConsumerWidget {
         error: (error, stack) => AppErrorWidget(
           message: error.toString(),
           onRetry: () {
-            ref.invalidate(clientProvider(clientId));
+            ref.invalidate(clientProvider(widget.clientId));
           },
         ),
       ),
@@ -89,634 +221,488 @@ class ClientDetailScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Invalidar provider del cliente para refrescar su detalle
-        ref.invalidate(clientProvider(clientId));
-        // También refrescar la lista de clientes para mantener sincronización
-        ref.read(clientsNotifierProvider).loadClients(refresh: true);
+        ref.invalidate(clientProvider(widget.clientId));
+        await _loadData();
       },
-      child: CustomScrollView(
-        slivers: [
-          // Header con información principal
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.primaryContainer,
-                    colorScheme.secondaryContainer,
-                  ],
-                ),
-              ),
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: colorScheme.primary,
-                        child: Text(
-                          client.name.isNotEmpty
-                              ? client.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              client.name,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${client.documentType}: ${client.documentNumber}',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildStatusChip(context, client.status),
-                      _buildTypeChip(context, client.type),
-                      _buildSourceChip(context, client.source),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Acciones rápidas
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '/reservations/new?clientId=$clientId',
-                            );
-                          },
-                          icon: const Icon(Icons.receipt_long),
-                          label: const Text('Nueva Reserva'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            context.push(
-                              '/clients/$clientId/activities/new?clientName=${Uri.encodeComponent(client.name)}',
-                            );
-                          },
-                          icon: const Icon(Icons.event_note),
-                          label: const Text('Nueva Actividad'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Información de contacto
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildInfoSection(
-                context,
-                'Información de Contacto',
-                Icons.contact_phone,
-                [
-                  if (client.phone != null)
-                    _buildActionableInfoRow(
-                      context,
-                      Icons.phone,
-                      'Teléfono',
-                      client.phone!,
-                      onTap: () => _launchPhone(client.phone!),
-                    ),
-                  if (client.email != null)
-                    _buildActionableInfoRow(
-                      context,
-                      Icons.email,
-                      'Email',
-                      client.email!,
-                      onTap: () => _launchEmail(client.email!),
-                    ),
-                  if (client.address != null)
-                    _buildInfoRow(
-                      context,
-                      Icons.location_on,
-                      'Dirección',
-                      client.address!,
-                    ),
-                  if (client.birthDate != null)
-                    _buildInfoRow(
-                      context,
-                      Icons.calendar_today,
-                      'Fecha de Nacimiento',
-                      _formatDate(client.birthDate!),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          // Información del cliente
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: _buildInfoSection(
-                context,
-                'Información del Cliente',
-                Icons.info,
-                [
-                  _buildInfoRow(
-                    context,
-                    Icons.category,
-                    'Tipo',
-                    _getTypeLabel(client.type),
-                  ),
-                  _buildInfoRow(
-                    context,
-                    Icons.flag,
-                    'Estado',
-                    _getStatusLabel(client.status),
-                  ),
-                  _buildInfoRow(
-                    context,
-                    Icons.place,
-                    'Origen',
-                    _getSourceLabel(client.source),
-                  ),
-                  _buildScoreRow(context, client.score),
-                ],
-              ),
-            ),
-          ),
-          // Notas
-          if (client.notes != null && client.notes!.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildInfoSection(
-                  context,
-                  'Notas',
-                  Icons.note,
-                  [
-                    Container(
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        client.notes!,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          // Métricas
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _buildMetricsSection(context, client),
-            ),
-          ),
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 16),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(BuildContext context, String status) {
-    final colorScheme = Theme.of(context).colorScheme;
-    Color chipColor;
-    IconData icon;
-
-    switch (status) {
-      case 'nuevo':
-        chipColor = Colors.blue;
-        icon = Icons.star;
-        break;
-      case 'contacto_inicial':
-        chipColor = Colors.orange;
-        icon = Icons.phone;
-        break;
-      case 'en_seguimiento':
-        chipColor = Colors.purple;
-        icon = Icons.track_changes;
-        break;
-      case 'cierre':
-        chipColor = Colors.green;
-        icon = Icons.check_circle;
-        break;
-      case 'perdido':
-        chipColor = Colors.red;
-        icon = Icons.cancel;
-        break;
-      default:
-        chipColor = colorScheme.surfaceVariant;
-        icon = Icons.info;
-    }
-
-    return Chip(
-      avatar: Icon(icon, size: 16, color: chipColor),
-      label: Text(_getStatusLabel(status)),
-      backgroundColor: chipColor.withOpacity(0.1),
-      labelStyle: TextStyle(color: chipColor, fontWeight: FontWeight.bold),
-    );
-  }
-
-  Widget _buildTypeChip(BuildContext context, String type) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Chip(
-      avatar: Icon(Icons.category, size: 16, color: colorScheme.primary),
-      label: Text(_getTypeLabel(type)),
-      backgroundColor: colorScheme.primaryContainer,
-      labelStyle: TextStyle(
-        color: colorScheme.onPrimaryContainer,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
-
-  Widget _buildSourceChip(BuildContext context, String source) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Chip(
-      avatar: Icon(Icons.place, size: 16, color: colorScheme.secondary),
-      label: Text(_getSourceLabel(source)),
-      backgroundColor: colorScheme.secondaryContainer,
-      labelStyle: TextStyle(
-        color: colorScheme.onSecondaryContainer,
-        fontWeight: FontWeight.w500,
-      ),
-    );
-  }
-
-  Widget _buildInfoSection(
-    BuildContext context,
-    String title,
-    IconData titleIcon,
-    List<Widget> children,
-  ) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Acciones rápidas compactas
             Row(
               children: [
-                Icon(titleIcon, size: 24),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.push(
+                        '/reservations/new?clientId=${widget.clientId}',
+                      );
+                    },
+                    icon: const Icon(Icons.receipt_long, size: 18),
+                    label: const Text('Nueva Reserva'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.push(
+                        '/clients/${widget.clientId}/activities/new?clientName=${Uri.encodeComponent(client.name)}',
+                      );
+                    },
+                    icon: const Icon(Icons.event_note, size: 18),
+                    label: const Text('Nueva Actividad'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
               ],
             ),
-            const Divider(height: 24),
-            ...children,
+            const SizedBox(height: 16),
+            // Tabla de Actividades
+            _buildActivitiesTable(context, colorScheme),
+            const SizedBox(height: 16),
+            // Tabla de Reservas
+            _buildReservationsTable(context, colorScheme),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(
-    BuildContext context,
-    IconData icon,
-    String label,
-    String value,
-  ) {
+  Widget _buildActivitiesTable(BuildContext context, ColorScheme colorScheme) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Row(
+    final activitiesColor = Colors.blue;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: activitiesColor.withOpacity(0.3), width: 2),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 24, color: theme.colorScheme.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: activitiesColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
               children: [
+                Icon(Icons.event_note, color: activitiesColor, size: 20),
+                const SizedBox(width: 8),
                 Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
+                  'Actividades',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: activitiesColor,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
+                const Spacer(),
+                if (_isLoadingActivities)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(activitiesColor),
+                    ),
+                  )
+                else if (_activities != null)
+                  Text(
+                    '${_activities!.length}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: activitiesColor,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
+          if (_isLoadingActivities)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_activitiesError != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Error: $_activitiesError',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            )
+          else if (_activities == null || _activities!.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'No hay actividades',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            _buildActivitiesTableContent(context, theme, activitiesColor),
         ],
       ),
     );
   }
 
-  Widget _buildActionableInfoRow(
+  Widget _buildActivitiesTableContent(
     BuildContext context,
-    IconData icon,
-    String label,
-    String value, {
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 24, color: theme.colorScheme.primary),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+    ThemeData theme,
+    Color color,
+  ) {
+    debugPrint('📋 [ClientDetail] _buildActivitiesTableContent - Total actividades: ${_activities!.length}');
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowColor: MaterialStateProperty.all(color.withOpacity(0.1)),
+        dataRowMinHeight: 40,
+        dataRowMaxHeight: 60,
+        columns: const [
+          DataColumn(label: Text('Fecha/Hora', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Título', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Tipo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Estado', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Notas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+        ],
+        rows: _activities!.map<DataRow>((activity) {
+          debugPrint('📋 [ClientDetail] Procesando actividad ID: ${activity.id}, Título: ${activity.title}, Tipo: ${activity.activityType}');
+          return DataRow(
+            cells: [
+              DataCell(
+                Text(
+                  activity.startDate != null
+                      ? DateFormat('dd/MM/yyyy HH:mm').format(activity.startDate!)
+                      : activity.createdAt != null
+                          ? DateFormat('dd/MM/yyyy HH:mm').format(activity.createdAt!)
+                          : '-',
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+              DataCell(
+                SizedBox(
+                  width: 150,
+                  child: Text(
+                    activity.title,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _getActivityTypeLabel(activity.activityType),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: color,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          value,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.open_in_new,
-                        size: 16,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
-        ),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(activity.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _getStatusLabel(activity.status),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: _getStatusColor(activity.status),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              DataCell(
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    activity.notes ?? '-',
+                    style: const TextStyle(fontSize: 11),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildScoreRow(BuildContext context, int score) {
+  Widget _buildReservationsTable(BuildContext context, ColorScheme colorScheme) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
-    Color scoreColor;
-    if (score >= 80) {
-      scoreColor = Colors.green;
-    } else if (score >= 50) {
-      scoreColor = Colors.orange;
-    } else {
-      scoreColor = Colors.red;
-    }
+    final reservationsColor = Colors.green;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Row(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: reservationsColor.withOpacity(0.3), width: 2),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.star, size: 24, color: colorScheme.primary),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: reservationsColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
               children: [
+                Icon(Icons.receipt_long, color: reservationsColor, size: 20),
+                const SizedBox(width: 8),
                 Text(
-                  'Score',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
+                  'Reservas',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: reservationsColor,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: LinearProgressIndicator(
-                        value: score / 100,
-                        backgroundColor: colorScheme.surfaceVariant,
-                        valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                const Spacer(),
+                if (_isLoadingReservations)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(reservationsColor),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '$score',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: scoreColor,
-                      ),
+                  )
+                else if (_reservations != null)
+                  Text(
+                    '${_reservations!.length}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: reservationsColor,
                     ),
-                  ],
-                ),
+                  ),
               ],
             ),
           ),
+          if (_isLoadingReservations)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_reservationsError != null)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Error: $_reservationsError',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            )
+          else if (_reservations == null || _reservations!.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'No hay reservas',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            Builder(
+              builder: (context) {
+                debugPrint('🎫 [ClientDetail] Construyendo tabla de reservas con ${_reservations!.length} items');
+                return _buildReservationsTableContent(context, theme, reservationsColor);
+              },
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricsSection(
+  Widget _buildReservationsTableContent(
     BuildContext context,
-    models.ClientModel client,
+    ThemeData theme,
+    Color color,
   ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.analytics, size: 24),
-                const SizedBox(width: 8),
+    debugPrint('🎫 [ClientDetail] _buildReservationsTableContent - Total reservas: ${_reservations!.length}');
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowColor: MaterialStateProperty.all(color.withOpacity(0.1)),
+        dataRowMinHeight: 40,
+        dataRowMaxHeight: 60,
+        columns: const [
+          DataColumn(label: Text('Número', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Fecha', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Proyecto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Unidad', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Estado', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Monto', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+        ],
+        rows: _reservations!.map<DataRow>((reservation) {
+          debugPrint('🎫 [ClientDetail] Procesando reserva ID: ${reservation.id}, Número: ${reservation.reservationNumber}, Estado: ${reservation.status}');
+          return DataRow(
+            onSelectChanged: (_) {
+              context.push('/reservations/${reservation.id}');
+            },
+            cells: [
+              DataCell(
                 Text(
-                  'Métricas',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  reservation.reservationNumber,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                ),
+              ),
+              DataCell(
+                Text(
+                  DateFormat('dd/MM/yyyy').format(reservation.reservationDate),
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+              DataCell(
+                SizedBox(
+                  width: 120,
+                  child: Text(
+                    reservation.project?.name ?? '-',
+                    style: const TextStyle(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMetric(
-                  context,
-                  Icons.work_outline,
-                  'Oportunidades',
-                  client.opportunitiesCount ?? 0,
-                  colorScheme.primary,
+              ),
+              DataCell(
+                Text(
+                  reservation.unit?.fullIdentifier ?? reservation.unit?.unitNumber ?? '-',
+                  style: const TextStyle(fontSize: 11),
                 ),
-                _buildMetric(
-                  context,
-                  Icons.event_note,
-                  'Actividades',
-                  client.activitiesCount ?? 0,
-                  colorScheme.secondary,
+              ),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getReservationStatusColor(reservation.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _getReservationStatusLabel(reservation.status),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _getReservationStatusColor(reservation.status),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-                _buildMetric(
-                  context,
-                  Icons.task_alt,
-                  'Tareas',
-                  client.tasksCount ?? 0,
-                  colorScheme.tertiary,
+              ),
+              DataCell(
+                Text(
+                  reservation.formattedReservationAmount ?? 
+                  'S/ ${reservation.reservationAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildMetric(
-    BuildContext context,
-    IconData icon,
-    String label,
-    int value,
-    Color color,
-  ) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 32, color: color),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '$value',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _getTypeLabel(String type) {
+  String _getActivityTypeLabel(String type) {
     final labels = {
-      'inversor': 'Inversor',
-      'comprador': 'Comprador',
-      'empresa': 'Empresa',
-      'constructor': 'Constructor',
+      'llamada': 'Llamada',
+      'reunion': 'Reunión',
+      'visita': 'Visita',
+      'seguimiento': 'Seguimiento',
+      'tarea': 'Tarea',
     };
-    return labels[type] ?? type;
+    return labels[type.toLowerCase()] ?? type;
   }
 
-  String _getStatusLabel(String status) {
+  String _getStatusLabel(String? status) {
+    if (status == null) return 'N/A';
     final labels = {
-      'nuevo': 'Nuevo',
-      'contacto_inicial': 'Contacto Inicial',
-      'en_seguimiento': 'En Seguimiento',
-      'cierre': 'Cierre',
-      'perdido': 'Perdido',
+      'programada': 'Programada',
+      'en_progreso': 'En Progreso',
+      'completada': 'Completada',
+      'cancelada': 'Cancelada',
     };
-    return labels[status] ?? status;
+    return labels[status.toLowerCase()] ?? status;
   }
 
-  String _getSourceLabel(String source) {
-    final labels = {
-      'redes_sociales': 'Redes Sociales',
-      'ferias': 'Ferias',
-      'referidos': 'Referidos',
-      'formulario_web': 'Formulario Web',
-      'publicidad': 'Publicidad',
-    };
-    return labels[source] ?? source;
-  }
-
-  String _formatDate(DateTime date) {
-    return DateFormat('dd/MM/yyyy').format(date);
-  }
-
-  Future<void> _launchPhone(String phone) async {
-    final uri = Uri.parse('tel:$phone');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+  Color _getStatusColor(String? status) {
+    if (status == null) return Colors.grey;
+    switch (status.toLowerCase()) {
+      case 'programada':
+        return Colors.blue;
+      case 'en_progreso':
+        return Colors.orange;
+      case 'completada':
+        return Colors.green;
+      case 'cancelada':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
-  Future<void> _launchEmail(String email) async {
-    final uri = Uri.parse('mailto:$email');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+  String _getReservationStatusLabel(String status) {
+    final labels = {
+      'activa': 'Activa',
+      'confirmada': 'Confirmada',
+      'cancelada': 'Cancelada',
+      'expirada': 'Expirada',
+      'convertida': 'Convertida',
+    };
+    return labels[status.toLowerCase()] ?? status;
+  }
+
+  Color _getReservationStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'activa':
+        return Colors.blue;
+      case 'confirmada':
+        return Colors.green;
+      case 'cancelada':
+        return Colors.red;
+      case 'expirada':
+        return Colors.orange;
+      case 'convertida':
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
+
 
   void _showDeleteDialog(
     BuildContext context,
@@ -743,7 +729,7 @@ class ClientDetailScreen extends ConsumerWidget {
                     const SnackBar(content: Text('Cliente eliminado')),
                   );
                   // Invalidar provider del cliente específico
-                  ref.invalidate(clientProvider(client.id!));
+                  ref.invalidate(clientProvider(client.id));
                   // Refrescar lista de clientes de forma reactiva
                   ref.read(clientsNotifierProvider).loadClients(refresh: true);
                   if (context.mounted) {

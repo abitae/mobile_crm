@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/reservation_provider.dart';
@@ -27,6 +29,20 @@ class _ReservationsListScreenState
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Listener para actualizar el UI cuando cambia el texto
+    _searchController.addListener(() {
+      setState(() {}); // Reconstruir para actualizar el suffixIcon
+    });
+    
+    // Escuchar cambios en el estado del notifier
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(reservationsNotifierProvider);
+      notifier.addListener((state) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    });
   }
 
   @override
@@ -38,142 +54,116 @@ class _ReservationsListScreenState
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-
+    
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-
+    
     if (currentScroll >= maxScroll * 0.8 && maxScroll > 0) {
       ref.read(reservationsNotifierProvider).loadMoreReservations();
     }
   }
 
-  void _handleSearch(String query) {
-    Future.delayed(const Duration(milliseconds: 300), () async {
-      if (_searchController.text == query) {
-        await ref.read(reservationsNotifierProvider).setSearch(
-              query.isEmpty ? null : query,
-            );
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final reservationsState =
-        ref.watch(reservationsNotifierProvider).currentState;
+    // Observar el notifier directamente para reactividad completa
+    final notifier = ref.watch(reservationsNotifierProvider);
+    final reservationsState = notifier.currentState;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reservas'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_outlined),
-            onPressed: () {
-              _showFilterBottomSheet(context);
-            },
-            tooltip: 'Filtros',
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Search bar
+          // Search bar compacto
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Buscar reservas',
-                hintText: 'Número, cliente, proyecto...',
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Buscar reservas...',
+                prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () async {
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
                           _searchController.clear();
-                          await ref.read(reservationsNotifierProvider).setSearch(null);
+                          ref.read(reservationsNotifierProvider).setSearch(null);
+                          FocusScope.of(context).unfocus();
                         },
                       )
                     : null,
                 filled: true,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              onChanged: _handleSearch,
+              onChanged: (value) {
+                if (value.isEmpty || value.trim().isEmpty) {
+                  ref.read(reservationsNotifierProvider).setSearch(null);
+                }
+              },
+              onSubmitted: (value) {
+                final searchText = value.trim();
+                ref.read(reservationsNotifierProvider).setSearch(
+                      searchText.isEmpty ? null : searchText,
+                    );
+                FocusScope.of(context).unfocus();
+              },
             ),
           ),
-          // Active filters chips
-          if (reservationsState.statusFilter != null ||
-              reservationsState.paymentStatusFilter != null ||
-              reservationsState.projectIdFilter != null ||
-              reservationsState.clientIdFilter != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  if (reservationsState.statusFilter != null)
-                    FilterChip(
-                      label: Text(_getStatusLabel(reservationsState.statusFilter!)),
-                      onSelected: (_) async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
+          // Filtro de estado compacto
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+            child: Builder(
+              builder: (context) {
+                final currentFilter = reservationsState.statusFilter;
+                final theme = Theme.of(context);
+                
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Todos',
+                        isSelected: currentFilter == null,
+                        onTap: () {
+                          final notifier = ref.read(reservationsNotifierProvider);
+                          notifier.setFilters(status: null);
+                        },
+                        theme: theme,
+                      ),
                     ),
-                  if (reservationsState.paymentStatusFilter != null)
-                    FilterChip(
-                      label: Text(_getPaymentStatusLabel(
-                          reservationsState.paymentStatusFilter!)),
-                      onSelected: (_) async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              paymentStatus: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              paymentStatus: null,
-                            );
-                      },
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Activas',
+                        isSelected: currentFilter == 'activa',
+                        onTap: () {
+                          final notifier = ref.read(reservationsNotifierProvider);
+                          notifier.setFilters(status: 'activa');
+                        },
+                        theme: theme,
+                      ),
                     ),
-                  if (reservationsState.projectIdFilter != null)
-                    FilterChip(
-                      label: Text('Proyecto ${reservationsState.projectIdFilter}'),
-                      onSelected: (_) async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              projectId: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              projectId: null,
-                            );
-                      },
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _AnimatedFilterButton(
+                        label: 'Confirmadas',
+                        isSelected: currentFilter == 'confirmada',
+                        onTap: () {
+                          final notifier = ref.read(reservationsNotifierProvider);
+                          notifier.setFilters(status: 'confirmada');
+                        },
+                        theme: theme,
+                      ),
                     ),
-                  if (reservationsState.clientIdFilter != null)
-                    FilterChip(
-                      label: Text('Cliente ${reservationsState.clientIdFilter}'),
-                      onSelected: (_) async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              clientId: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () async {
-                        await ref.read(reservationsNotifierProvider).setFilters(
-                              clientId: null,
-                            );
-                      },
-                    ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -189,30 +179,6 @@ class _ReservationsListScreenState
           context.push('/reservations/new');
         },
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _showFilterBottomSheet(BuildContext context) {
-    final reservationsState =
-        ref.read(reservationsNotifierProvider).currentState;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _FilterBottomSheet(
-        reservationsState: reservationsState,
-        onApply: (status, paymentStatus, projectId, clientId) async {
-          await ref.read(reservationsNotifierProvider).setFilters(
-                status: status,
-                paymentStatus: paymentStatus,
-                projectId: projectId,
-                clientId: clientId,
-              );
-        },
-        onClear: () async {
-          await ref.read(reservationsNotifierProvider).clearFilters();
-        },
       ),
     );
   }
@@ -263,225 +229,156 @@ class _ReservationsListScreenState
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: state.reservations.length + (state.isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= state.reservations.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final reservation = state.reservations[index];
-        return StaggerAnimation(
-          index: index,
-          child: ReservationCard(
-            reservation: reservation,
-            onTap: () {
-              context.push('/reservations/${reservation.id}');
-            },
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            )),
+            child: child,
           ),
         );
       },
+      child: ListView.builder(
+        key: ValueKey('reservations_list_${state.statusFilter}_${state.search}'),
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: state.reservations.length + (state.isLoadingMore ? 1 : 0),
+        cacheExtent: 500,
+        itemBuilder: (context, index) {
+          if (index >= state.reservations.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final reservation = state.reservations[index];
+          return StaggerAnimation(
+            index: index,
+            child: ReservationCard(
+              key: ValueKey('reservation_${reservation.id}'),
+              reservation: reservation,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.push('/reservations/${reservation.id}');
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Widget para el bottom sheet de filtros
-class _FilterBottomSheet extends ConsumerStatefulWidget {
-  final ReservationsState reservationsState;
-  final Future<void> Function(String? status, String? paymentStatus, int? projectId,
-      int? clientId) onApply;
-  final Future<void> Function() onClear;
+/// Botón de filtro animado con feedback visual mejorado
+class _AnimatedFilterButton extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final ThemeData theme;
 
-  const _FilterBottomSheet({
-    required this.reservationsState,
-    required this.onApply,
-    required this.onClear,
+  const _AnimatedFilterButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.theme,
   });
 
   @override
-  ConsumerState<_FilterBottomSheet> createState() =>
-      _FilterBottomSheetState();
+  State<_AnimatedFilterButton> createState() => _AnimatedFilterButtonState();
 }
 
-class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
-  late String? _selectedStatus;
-  late String? _selectedPaymentStatus;
-  String? _projectIdText;
-  String? _clientIdText;
+class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  bool _isPressed = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedStatus = widget.reservationsState.statusFilter;
-    _selectedPaymentStatus = widget.reservationsState.paymentStatusFilter;
-    _projectIdText = widget.reservationsState.projectIdFilter?.toString();
-    _clientIdText = widget.reservationsState.clientIdFilter?.toString();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+    _controller.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+    _controller.reverse();
+    widget.onTap();
+  }
+
+  void _handleTapCancel() {
+    setState(() => _isPressed = false);
+    _controller.reverse();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Filtros',
-                style: Theme.of(context).textTheme.titleLarge,
+    return GestureDetector(
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? widget.theme.colorScheme.primary
+                    : widget.theme.colorScheme.surface,
+                border: Border.all(
+                  color: widget.isSelected
+                      ? widget.theme.colorScheme.primary
+                      : widget.theme.colorScheme.outline.withOpacity(0.3),
+                  width: widget.isSelected ? 1.5 : 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
               ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Filtro de Estado
-          DropdownButtonFormField<String>(
-            value: _selectedStatus,
-            decoration: const InputDecoration(
-              labelText: 'Estado',
-              prefixIcon: Icon(Icons.flag_outlined),
-            ),
-            items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('Todos los estados'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'activa',
-                child: Text('Activa'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'confirmada',
-                child: Text('Confirmada'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'cancelada',
-                child: Text('Cancelada'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'vencida',
-                child: Text('Vencida'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'convertida_venta',
-                child: Text('Convertida a Venta'),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedStatus = value;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          // Filtro de Estado de Pago
-          DropdownButtonFormField<String>(
-            value: _selectedPaymentStatus,
-            decoration: const InputDecoration(
-              labelText: 'Estado de Pago',
-              prefixIcon: Icon(Icons.payment_outlined),
-            ),
-            items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('Todos los estados'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'pagado',
-                child: Text('Pagado'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'pendiente',
-                child: Text('Pendiente'),
-              ),
-              const DropdownMenuItem<String>(
-                value: 'parcial',
-                child: Text('Parcial'),
-              ),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedPaymentStatus = value;
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          // Filtro de Proyecto ID
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'ID de Proyecto',
-              prefixIcon: Icon(Icons.business_outlined),
-              hintText: 'Opcional',
-            ),
-            keyboardType: TextInputType.number,
-            controller: TextEditingController(text: _projectIdText),
-            onChanged: (value) {
-              _projectIdText = value.isEmpty ? null : value;
-            },
-          ),
-          const SizedBox(height: 16),
-          // Filtro de Cliente ID
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'ID de Cliente',
-              prefixIcon: Icon(Icons.person_outlined),
-              hintText: 'Opcional',
-            ),
-            keyboardType: TextInputType.number,
-            controller: TextEditingController(text: _clientIdText),
-            onChanged: (value) {
-              _clientIdText = value.isEmpty ? null : value;
-            },
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await widget.onClear();
-                    if (mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Limpiar'),
+              child: Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: widget.isSelected
+                        ? widget.theme.colorScheme.onPrimary
+                        : widget.theme.colorScheme.onSurface,
+                    fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                  child: Text(widget.label),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () async {
-                    await widget.onApply(
-                      _selectedStatus,
-                      _selectedPaymentStatus,
-                      _projectIdText != null
-                          ? int.tryParse(_projectIdText!)
-                          : null,
-                      _clientIdText != null
-                          ? int.tryParse(_clientIdText!)
-                          : null,
-                    );
-                    if (mounted) Navigator.pop(context);
-                  },
-                  child: const Text('Aplicar'),
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          );
+        },
       ),
     );
   }

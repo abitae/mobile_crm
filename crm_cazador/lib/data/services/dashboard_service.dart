@@ -7,13 +7,11 @@ import '../../core/logging/app_logger.dart';
 class DashboardStats {
   final ClientsStats clients;
   final DaterosStats dateros;
-  final ProjectsStats projects;
   final ReservationsStats reservations;
 
   DashboardStats({
     required this.clients,
     required this.dateros,
-    required this.projects,
     required this.reservations,
   });
 
@@ -23,7 +21,6 @@ class DashboardStats {
     return DashboardStats(
       clients: ClientsStats.fromJson(data['clients'] as Map<String, dynamic>? ?? {}),
       dateros: DaterosStats.fromJson(data['dateros'] as Map<String, dynamic>? ?? {}),
-      projects: ProjectsStats.fromJson(data['projects'] as Map<String, dynamic>? ?? {}),
       reservations: ReservationsStats.fromJson(data['reservations'] as Map<String, dynamic>? ?? {}),
     );
   }
@@ -71,22 +68,6 @@ class DaterosStats {
   }
 }
 
-class ProjectsStats {
-  final int total;
-  final int withAvailableUnits;
-
-  ProjectsStats({
-    required this.total,
-    required this.withAvailableUnits,
-  });
-
-  factory ProjectsStats.fromJson(Map<String, dynamic> json) {
-    return ProjectsStats(
-      total: json['total'] as int? ?? 0,
-      withAvailableUnits: json['with_available_units'] as int? ?? 0,
-    );
-  }
-}
 
 class ReservationsStats {
   final int total;

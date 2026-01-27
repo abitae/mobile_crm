@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/project_provider.dart';
@@ -25,6 +27,20 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Listener para actualizar el UI cuando cambia el texto
+    _searchController.addListener(() {
+      setState(() {}); // Reconstruir para actualizar el suffixIcon
+    });
+    
+    // Escuchar cambios en el estado del notifier
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(projectsNotifierProvider);
+      notifier.addListener((state) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    });
   }
 
   @override
@@ -35,119 +51,67 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent * 0.8) {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    
+    if (currentScroll >= maxScroll * 0.8 && maxScroll > 0) {
       ref.read(projectsNotifierProvider).loadMoreProjects();
     }
   }
 
-  void _handleSearch(String query) {
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (_searchController.text == query) {
-        ref.read(projectsNotifierProvider).setSearch(
-              query.isEmpty ? null : query,
-            );
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final projectsState = ref.watch(projectsProvider);
+    // Observar el notifier directamente para reactividad completa
+    final notifier = ref.watch(projectsNotifierProvider);
+    final projectsState = notifier.currentState;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Proyectos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_outlined),
-            onPressed: () {
-              _showFilterBottomSheet(context);
-            },
-            tooltip: 'Filtros',
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Search bar
+          // Search bar compacto
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Buscar proyectos',
-                hintText: 'Nombre, dirección, distrito...',
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Buscar proyectos...',
+                prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, size: 20),
                         onPressed: () {
                           _searchController.clear();
                           ref.read(projectsNotifierProvider).setSearch(null);
+                          FocusScope.of(context).unfocus();
                         },
                       )
                     : null,
                 filled: true,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              onChanged: _handleSearch,
+              onChanged: (value) {
+                if (value.isEmpty || value.trim().isEmpty) {
+                  ref.read(projectsNotifierProvider).setSearch(null);
+                }
+              },
+              onSubmitted: (value) {
+                final searchText = value.trim();
+                ref.read(projectsNotifierProvider).setSearch(
+                      searchText.isEmpty ? null : searchText,
+                    );
+                FocusScope.of(context).unfocus();
+              },
             ),
           ),
-          // Active filters chips
-          if (_hasActiveFilters(projectsState))
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  if (projectsState.projectTypeFilter != null)
-                    FilterChip(
-                      label: Text(_getProjectTypeLabel(projectsState.projectTypeFilter!)),
-                      onSelected: (_) {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              projectType: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              projectType: null,
-                            );
-                      },
-                    ),
-                  if (projectsState.statusFilter != null)
-                    FilterChip(
-                      label: Text(_getStatusLabel(projectsState.statusFilter!)),
-                      onSelected: (_) {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              status: null,
-                            );
-                      },
-                    ),
-                  if (projectsState.hasAvailableUnitsFilter == true)
-                    FilterChip(
-                      label: const Text('Solo con unidades disponibles'),
-                      onSelected: (_) {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              hasAvailableUnits: null,
-                            );
-                      },
-                      deleteIcon: const Icon(Icons.close, size: 18),
-                      onDeleted: () {
-                        ref.read(projectsNotifierProvider).setFilters(
-                              hasAvailableUnits: null,
-                            );
-                      },
-                    ),
-                ],
-              ),
-            ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -159,52 +123,6 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  bool _hasActiveFilters(ProjectsState state) {
-    return state.projectTypeFilter != null ||
-        state.loteTypeFilter != null ||
-        state.stageFilter != null ||
-        state.legalStatusFilter != null ||
-        state.statusFilter != null ||
-        state.districtFilter != null ||
-        state.provinceFilter != null ||
-        state.regionFilter != null ||
-        state.hasAvailableUnitsFilter == true;
-  }
-
-  void _showFilterBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Filtros',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            // TODO: Implementar filtros con SegmentedButton o Dropdown
-            const Text('Filtros próximamente disponibles'),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () {
-                ref.read(projectsNotifierProvider).clearFilters();
-                Navigator.pop(context);
-              },
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
-              child: const Text('Limpiar filtros'),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -256,28 +174,51 @@ class _ProjectsListScreenState extends ConsumerState<ProjectsListScreen> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: state.projects.length + (state.isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= state.projects.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final project = state.projects[index];
-        return StaggerAnimation(
-          index: index,
-          child: ProjectCard(
-            project: project,
-            onTap: () {
-              context.push('/projects/${project.id}');
-            },
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.0, 0.1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            )),
+            child: child,
           ),
         );
       },
+      child: ListView.builder(
+        key: ValueKey('projects_list_${state.search}'),
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: state.projects.length + (state.isLoadingMore ? 1 : 0),
+        cacheExtent: 500,
+        itemBuilder: (context, index) {
+          if (index >= state.projects.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final project = state.projects[index];
+          return StaggerAnimation(
+            index: index,
+            child: ProjectCard(
+              key: ValueKey('project_${project.id}'),
+              project: project,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                context.push('/projects/${project.id}');
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }

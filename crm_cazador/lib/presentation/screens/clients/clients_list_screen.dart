@@ -73,163 +73,98 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Clientes'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              context.push('/clients/new');
+            },
+            tooltip: 'Agregar Cliente',
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Search bar mejorado con animaciones
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        labelText: 'Buscar clientes',
-                        hintText: 'Nombre, documento, teléfono...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  key: const ValueKey('clear'),
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    HapticFeedback.lightImpact();
-                                    _searchController.clear();
-                                    ref.read(clientsNotifierProvider).setSearch(null);
-                                    FocusScope.of(context).unfocus();
-                                  },
-                                )
-                              : const SizedBox.shrink(key: ValueKey('empty')),
-                        ),
-                        filled: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        if (value.isEmpty || value.trim().isEmpty) {
-                          ref.read(clientsNotifierProvider).setSearch(null);
-                        }
-                      },
-                      onSubmitted: (value) {
-                        HapticFeedback.selectionClick();
-                        final searchText = value.trim();
-                        ref.read(clientsNotifierProvider).setSearch(
-                              searchText.isEmpty ? null : searchText,
-                            );
-                        FocusScope.of(context).unfocus();
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AnimatedScale(
-                  scale: _searchController.text.isNotEmpty ? 1.0 : 0.9,
-                  duration: const Duration(milliseconds: 200),
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      final searchText = _searchController.text.trim();
-                      ref.read(clientsNotifierProvider).setSearch(
-                            searchText.isEmpty ? null : searchText,
-                          );
-                      FocusScope.of(context).unfocus();
-                    },
-                    icon: const Icon(Icons.search, size: 20),
-                    label: const Text('Buscar'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      minimumSize: const Size(0, 56),
-                    ),
-                  ),
+          // Search bar mejorado con mejor diseño visual
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ),
-          // Indicador de resultados y filtros activos
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: (clientsState.createTypeFilter != null || clientsState.search != null)
-                ? Container(
-                    key: const ValueKey('filters'),
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Row(
-                      children: [
-                        // Contador de resultados
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${clientsState.clients.length} ${clientsState.clients.length == 1 ? 'cliente' : 'clientes'}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                ),
-                              ),
-                            ],
-                          ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar clientes...',
+                hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ),
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 22,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
-                        const SizedBox(width: 8),
-                        // Chips de filtros activos
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                if (clientsState.search != null)
-                                  _FilterChip(
-                                    label: 'Búsqueda: "${clientsState.search}"',
-                                    onDelete: () {
-                                      debugPrint('🗑️ [ClientsList] Eliminando filtro de búsqueda');
-                                      HapticFeedback.lightImpact();
-                                      _searchController.clear();
-                                      final notifier = ref.read(clientsNotifierProvider);
-                                      notifier.setSearch(null);
-                                    },
-                                  ),
-                                if (clientsState.createTypeFilter != null)
-                                  _FilterChip(
-                                    label: _getCreateTypeLabel(clientsState.createTypeFilter!),
-                                    onDelete: () {
-                                      debugPrint('🗑️ [ClientsList] Eliminando filtro createType');
-                                      HapticFeedback.lightImpact();
-                                      final notifier = ref.read(clientsNotifierProvider);
-                                      notifier.setFilters(createType: null);
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(key: ValueKey('no-filters')),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(clientsNotifierProvider).setSearch(null);
+                          FocusScope.of(context).unfocus();
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {}); // Actualizar UI para mostrar/ocultar clear button
+                if (value.isEmpty || value.trim().isEmpty) {
+                  ref.read(clientsNotifierProvider).setSearch(null);
+                }
+              },
+              onSubmitted: (value) {
+                final searchText = value.trim();
+                ref.read(clientsNotifierProvider).setSearch(
+                      searchText.isEmpty ? null : searchText,
+                    );
+                FocusScope.of(context).unfocus();
+              },
+            ),
           ),
-          // Filtro de tipo de creación mejorado con animaciones
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+          // Filtro de tipo de creación mejorado
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Builder(
               builder: (context) {
@@ -245,13 +180,12 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
                         onTap: () {
                           HapticFeedback.selectionClick();
                           final notifier = ref.read(clientsNotifierProvider);
-                          debugPrint('🔘 [ClientsList] Filtro seleccionado: null (Todos)');
                           notifier.setFilters(createType: null);
                         },
                         theme: theme,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: _AnimatedFilterButton(
                         label: 'Propio',
@@ -259,13 +193,12 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
                         onTap: () {
                           HapticFeedback.selectionClick();
                           final notifier = ref.read(clientsNotifierProvider);
-                          debugPrint('🔘 [ClientsList] Filtro seleccionado: propio');
                           notifier.setFilters(createType: 'propio');
                         },
                         theme: theme,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: _AnimatedFilterButton(
                         label: 'Dateado',
@@ -273,7 +206,6 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
                         onTap: () {
                           HapticFeedback.selectionClick();
                           final notifier = ref.read(clientsNotifierProvider);
-                          debugPrint('🔘 [ClientsList] Filtro seleccionado: datero');
                           notifier.setFilters(createType: 'datero');
                         },
                         theme: theme,
@@ -296,23 +228,20 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
+          HapticFeedback.mediumImpact();
           context.push('/clients/new');
         },
-        child: const Icon(Icons.add),
+        tooltip: 'Agregar Cliente',
+        icon: const Icon(Icons.add),
+        label: const Text('Nuevo Cliente'),
+        elevation: 6,
       ),
     );
   }
 
 
-  String _getCreateTypeLabel(String createType) {
-    final labels = {
-      'propio': 'Propio',
-      'datero': 'Dateado',
-    };
-    return labels[createType] ?? createType;
-  }
 
   Widget _buildBody(ClientsState state) {
     if (state.isLoading && state.clients.isEmpty) {
@@ -459,8 +388,8 @@ class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 color: widget.isSelected
@@ -469,7 +398,7 @@ class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
                 border: Border.all(
                   color: widget.isSelected
                       ? widget.theme.colorScheme.primary
-                      : widget.theme.colorScheme.outline.withOpacity(0.3),
+                      : widget.theme.colorScheme.outline.withOpacity(0.2),
                   width: widget.isSelected ? 2 : 1,
                 ),
                 borderRadius: BorderRadius.circular(12),
@@ -481,41 +410,27 @@ class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
                           offset: const Offset(0, 2),
                         ),
                       ]
-                    : null,
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: widget.isSelected
-                        ? Icon(
-                            Icons.check_circle,
-                            key: const ValueKey('selected'),
-                            size: 18,
-                            color: widget.theme.colorScheme.onPrimary,
-                          )
-                        : Icon(
-                            Icons.radio_button_unchecked,
-                            key: const ValueKey('unselected'),
-                            size: 18,
-                            color: widget.theme.colorScheme.onSurface.withOpacity(0.6),
-                          ),
+              child: Center(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 250),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: widget.isSelected
+                        ? widget.theme.colorScheme.onPrimary
+                        : widget.theme.colorScheme.onSurface,
+                    fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
+                    letterSpacing: 0.2,
                   ),
-                  const SizedBox(width: 6),
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: widget.isSelected
-                          ? widget.theme.colorScheme.onPrimary
-                          : widget.theme.colorScheme.onSurface,
-                      fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                    child: Text(widget.label),
-                  ),
-                ],
+                  child: Text(widget.label),
+                ),
               ),
             ),
           );
@@ -525,92 +440,4 @@ class _AnimatedFilterButtonState extends State<_AnimatedFilterButton>
   }
 }
 
-/// Chip para mostrar filtros activos con eliminación rápida
-class _FilterChip extends StatefulWidget {
-  final String label;
-  final VoidCallback onDelete;
-
-  const _FilterChip({
-    required this.label,
-    required this.onDelete,
-  });
-
-  @override
-  State<_FilterChip> createState() => _FilterChipState();
-}
-
-class _FilterChipState extends State<_FilterChip> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleTap() {
-    HapticFeedback.lightImpact();
-    widget.onDelete();
-    _controller.forward().then((_) {
-      _controller.reverse();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        _handleTap();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 8),
-              child: Chip(
-                label: Text(
-                  widget.label,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                deleteIcon: const Icon(Icons.close, size: 18),
-                onDeleted: () {
-                  HapticFeedback.lightImpact();
-                  widget.onDelete();
-                },
-                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
-                labelStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                ),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../../../data/models/client_model.dart';
@@ -42,7 +43,10 @@ class ClientCard extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            onLongPress: () => _showContextMenu(context),
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              _showContextMenu(context);
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -234,45 +238,136 @@ class ClientCard extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context) {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: Text(client.name),
-              subtitle: Text('${client.documentType}: ${client.documentNumber}'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.event_note),
-              title: const Text('Crear Actividad'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(
-                  '/clients/${client.id}/activities/new?clientName=${Uri.encodeComponent(client.name)}',
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: const Text('Crear Reserva'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/reservations/new?clientId=${client.id}');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Editar Cliente'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/clients/${client.id}/edit');
-              },
-            ),
-          ],
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            client.name,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${client.documentType}: ${client.documentNumber}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Actions
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.event_note,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                title: const Text('Crear Actividad'),
+                subtitle: const Text('Registrar una nueva actividad'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push(
+                    '/clients/${client.id}/activities/new?clientName=${Uri.encodeComponent(client.name)}',
+                  );
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.receipt_long,
+                    color: theme.colorScheme.secondary,
+                    size: 20,
+                  ),
+                ),
+                title: const Text('Crear Reserva'),
+                subtitle: const Text('Registrar una nueva reserva'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/reservations/new?clientId=${client.id}');
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.tertiaryContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.edit,
+                    color: theme.colorScheme.tertiary,
+                    size: 20,
+                  ),
+                ),
+                title: const Text('Editar Cliente'),
+                subtitle: const Text('Modificar información del cliente'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/clients/${client.id}/edit');
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );

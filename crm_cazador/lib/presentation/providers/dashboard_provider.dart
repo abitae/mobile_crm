@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:state_notifier/state_notifier.dart';
+import 'package:flutter/foundation.dart';
 import '../../data/services/dashboard_service.dart';
 import '../../core/exceptions/api_exception.dart';
 
@@ -36,7 +37,8 @@ class DashboardState {
 /// Provider de dashboard
 class DashboardNotifier extends StateNotifier<DashboardState> {
   DashboardNotifier() : super(DashboardState()) {
-    loadStats();
+    // Cargar datos después de la inicialización
+    Future.microtask(() => loadStats());
   }
 
   /// Getter público para acceder al estado
@@ -51,12 +53,19 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
     try {
       final stats = await DashboardService.getStats();
       
+      debugPrint('📊 [DashboardNotifier] Estadísticas recibidas:');
+      debugPrint('   - Clientes: ${stats.clients.total}');
+      debugPrint('   - Dateros: ${stats.dateros.total}');
+      debugPrint('   - Reservas: ${stats.reservations.total}');
+      
       state = state.copyWith(
         stats: stats,
         isLoading: false,
         lastUpdated: DateTime.now(),
         clearError: true,
       );
+      
+      debugPrint('✅ [DashboardNotifier] Estado actualizado');
     } on ApiException catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -82,6 +91,19 @@ final dashboardNotifierProvider = Provider<DashboardNotifier>((ref) {
 });
 
 /// Provider global del estado del dashboard (reactivo)
+/// Usa un StateNotifierProvider implícito para reactividad completa
 final dashboardProvider = Provider<DashboardState>((ref) {
-  return ref.watch(dashboardNotifierProvider).currentState;
+  final notifier = ref.watch(dashboardNotifierProvider);
+  
+  // Escuchar cambios del estado del notifier
+  ref.listen<DashboardNotifier>(
+    dashboardNotifierProvider,
+    (previous, next) {
+      // Forzar actualización cuando el notifier cambia
+      // Esto se hace automáticamente cuando el estado del notifier cambia
+    },
+  );
+  
+  // Retornar el estado actual
+  return notifier.currentState;
 });
