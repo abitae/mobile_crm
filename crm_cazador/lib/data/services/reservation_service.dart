@@ -158,6 +158,11 @@ class ReservationService {
     try {
       final response = await ApiService.get('/cazador/reservations/$id');
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al obtener la reserva solicitada';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;
@@ -185,6 +190,11 @@ class ReservationService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al crear la reserva en Cazador';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;
@@ -214,6 +224,11 @@ class ReservationService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al actualizar la reserva en Cazador';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;
@@ -262,6 +277,11 @@ class ReservationService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al confirmar la reserva con comprobante';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;
@@ -296,6 +316,11 @@ class ReservationService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al cancelar la reserva';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;
@@ -321,6 +346,11 @@ class ReservationService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al convertir la reserva a venta';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final reservationData =
           dataObj?['reservation'] ?? dataObj ?? responseData;

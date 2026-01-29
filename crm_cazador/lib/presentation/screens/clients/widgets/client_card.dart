@@ -25,6 +25,8 @@ class ClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final resolvedCreateMode = client.createMode ??
+        (client.documentNumber.isNotEmpty ? 'dni' : 'phone');
     return RepaintBoundary(
       child: AnimatedCard(
         child: Card(
@@ -74,6 +76,10 @@ class ClientCard extends StatelessWidget {
                         if (client.createType != null) ...[
                           const SizedBox(width: 6),
                           _CreateTypeChip(createType: client.createType),
+                        ],
+                        if (resolvedCreateMode.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          _CreateModeChip(mode: resolvedCreateMode),
                         ],
                         const SizedBox(width: 8),
                         _StatusChip(status: client.status),
@@ -484,6 +490,53 @@ class _CreateTypeChip extends StatelessWidget {
         return 'Propio';
       default:
         return createType;
+    }
+  }
+}
+
+class _CreateModeChip extends StatelessWidget {
+  final String mode;
+
+  const _CreateModeChip({required this.mode});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _getCreateModeColor(mode);
+    final label = _getCreateModeLabel(mode);
+
+    return Chip(
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+      ),
+      backgroundColor: color.withOpacity(0.15),
+      labelStyle: TextStyle(color: color),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      side: BorderSide(color: color.withOpacity(0.5), width: 1),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Color _getCreateModeColor(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'dni':
+        return AppColors.primary;
+      case 'phone':
+        return AppColors.warning;
+      default:
+        return AppColors.outline;
+    }
+  }
+
+  String _getCreateModeLabel(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'dni':
+        return 'DNI';
+      case 'phone':
+        return 'Phone';
+      default:
+        return mode;
     }
   }
 }

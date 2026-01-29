@@ -23,6 +23,11 @@ class ClientModel {
   final DateTime? updatedAt;
   final String? createType;
 
+  /// Modo de creación según backend: `dni` o `phone`.
+  /// - `dni`: document_type y document_number son obligatorios.
+  /// - `phone`: DNI es opcional.
+  final String? createMode;
+
   ClientModel({
     required this.id,
     required this.name,
@@ -46,6 +51,7 @@ class ClientModel {
     this.createdAt,
     this.updatedAt,
     this.createType,
+    this.createMode,
   });
 
   factory ClientModel.fromJson(Map<String, dynamic> json) {
@@ -57,7 +63,7 @@ class ClientModel {
       id: json['id'] as int,
       name: json['name'] as String,
       documentType: normalizedDocType,
-      documentNumber: json['document_number'] as String,
+      documentNumber: json['document_number'] as String? ?? '',
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       address: json['address'] as String?,
@@ -82,6 +88,7 @@ class ClientModel {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       createType: json['create_type'] as String?,
+      createMode: json['create_mode'] as String?,
     );
   }
 
@@ -102,35 +109,71 @@ class ClientModel {
       'notes': notes,
       'user_id': userId,
       'assigned_advisor_id': assignedAdvisorId,
+      if (createType != null) 'create_type': createType,
+      if (createMode != null) 'create_mode': createMode,
     };
   }
 
   Map<String, dynamic> toPartialJson() {
     final map = <String, dynamic>{};
     if (name.isNotEmpty) map['name'] = name;
-    // document_type y document_number son obligatorios al actualizar
-    map['document_type'] = documentType;
-    map['document_number'] = documentNumber;
-    if (phone != null && phone!.isNotEmpty) map['phone'] = phone;
+
+    final mode = (createMode ?? '').isNotEmpty
+        ? createMode!
+        : (documentNumber.isNotEmpty ? 'dni' : 'phone');
+    map['create_mode'] = mode;
+
+    // Documentos:
+    // - Si mode == 'dni', siempre enviar document_type y document_number.
+    // - Si mode == 'phone', enviar document_type DNI y document_number placeholder si está vacío.
+    if (mode == 'dni' || documentType.isNotEmpty) {
+      map['document_type'] = documentType;
+    } else if (mode == 'phone') {
+      map['document_type'] = 'DNI';
+    }
+    if (mode == 'dni' || documentNumber.isNotEmpty) {
+      map['document_number'] = documentNumber;
+    } else if (mode == 'phone') {
+      map['document_number'] = '00000000';
+    }
+
+    final sanitizedPhone = phone?.replaceAll(RegExp(r'[^0-9]'), '');
+    if (sanitizedPhone != null && sanitizedPhone.isNotEmpty) {
+      map['phone'] = sanitizedPhone;
+    }
     if (email != null && email!.isNotEmpty) map['email'] = email;
     if (address != null && address!.isNotEmpty) map['address'] = address;
     if (birthDate != null) {
       map['birth_date'] = birthDate!.toIso8601String().split('T')[0];
     }
-    map['type'] = type;
+    map['client_type'] = type;
     map['status'] = status;
     map['source'] = source;
     map['score'] = score;
     if (notes != null && notes!.isNotEmpty) map['notes'] = notes;
+    if (createType != null) map['create_type'] = createType;
     return map;
   }
 
   Map<String, dynamic> toCreateJson() {
-    return {
+    // Determinar create_mode: si no viene, asumir 'dni' como valor por defecto.
+    final mode = (createMode ?? '').isNotEmpty ? createMode! : 'dni';
+
+    // Sanitizar teléfono (solo dígitos) para cumplir con validación de backend.
+    final sanitizedPhone = phone
+        ?.replaceAll(RegExp(r'[^0-9]'), '');
+
+    final data = <String, dynamic>{
       'name': name,
-      'document_type': documentType,
-      'document_number': documentNumber,
-      'phone': phone,
+      'create_mode': mode,
+    // Documentos:
+    // - Si mode == 'dni', siempre enviar document_type y document_number.
+    // - Si mode == 'phone', enviar document_type DNI y document_number placeholder si está vacío.
+    if (mode == 'dni' || documentType.isNotEmpty) 'document_type': documentType,
+    if (mode == 'phone' && (documentType.isEmpty)) 'document_type': 'DNI',
+    if (mode == 'dni' || documentNumber.isNotEmpty) 'document_number': documentNumber,
+    if (mode == 'phone' && documentNumber.isEmpty) 'document_number': '00000000',
+      'phone': sanitizedPhone,
       'email': email,
       'address': address,
       'birth_date': birthDate?.toIso8601String().split('T')[0],
@@ -139,8 +182,11 @@ class ClientModel {
       'source': source,
       'score': score,
       'notes': notes,
+      if (createType != null) 'create_type': createType,
       // Nota: assigned_advisor_id se asigna automáticamente en el backend
     };
+
+    return data;
   }
 }
 

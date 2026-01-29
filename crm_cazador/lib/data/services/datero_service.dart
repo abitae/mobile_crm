@@ -3,6 +3,7 @@ import 'api_service.dart';
 import '../models/datero_model.dart';
 import '../models/api_response.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
 
 /// Servicio para gestión de dateros (Cazador)
 class DateroService {
@@ -32,6 +33,11 @@ class DateroService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al obtener los dateros';
+        throw ApiException(message);
+      }
       // Reutilizamos PaginatedResponse pero el formato de data es diferente (data.dateros)
       final dataObj = responseData['data'] as Map<String, dynamic>? ?? {};
       final daterosList = dataObj['dateros'] as List<dynamic>? ?? [];
@@ -47,22 +53,10 @@ class DateroService {
         perPage: pagination['per_page'] as int? ?? perPage,
       );
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            errorMessage ?? 'No tienes permiso para acceder a estos dateros');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(
-          errorMessage ?? 'Error al obtener dateros: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener los dateros',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -74,27 +68,20 @@ class DateroService {
     try {
       final response = await ApiService.get('/cazador/dateros/$id');
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al obtener el datero';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final userData = dataObj?['user'] ?? dataObj ?? responseData;
 
       return DateroModel.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Datero no encontrado');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            errorMessage ?? 'No tienes permiso para acceder a este datero');
-      }
-      throw ApiException(
-          errorMessage ?? 'Error al obtener datero: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener el datero',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -110,42 +97,20 @@ class DateroService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al registrar el datero';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final userData = dataObj?['user'] ?? dataObj ?? responseData;
 
       return DateroModel.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        String? specificError;
-        
-        // Intentar obtener el primer error de validación
-        if (errors != null && errors.isNotEmpty) {
-          final firstErrorKey = errors.keys.first;
-          final firstErrorValue = errors[firstErrorKey];
-          
-          if (firstErrorValue is List && firstErrorValue.isNotEmpty) {
-            specificError = firstErrorValue.first.toString();
-          } else if (firstErrorValue is String) {
-            specificError = firstErrorValue;
-          }
-        }
-        
-        throw ApiException(
-            specificError ?? apiMessage ?? 'Error de validación');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(apiMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al crear datero: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al registrar el datero',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -164,45 +129,20 @@ class DateroService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al actualizar el datero';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final userData = dataObj?['user'] ?? dataObj ?? responseData;
 
       return DateroModel.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? apiMessage;
-      if (responseData is Map<String, dynamic>) {
-        apiMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(apiMessage ?? 'Datero no encontrado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-            apiMessage ?? 'No tienes permiso para acceder a este datero');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        String? specificError;
-        
-        // Intentar obtener el primer error de validación
-        if (errors != null && errors.isNotEmpty) {
-          final firstErrorKey = errors.keys.first;
-          final firstErrorValue = errors[firstErrorKey];
-          
-          if (firstErrorValue is List && firstErrorValue.isNotEmpty) {
-            specificError = firstErrorValue.first.toString();
-          } else if (firstErrorValue is String) {
-            specificError = firstErrorValue;
-          }
-        }
-        
-        throw ApiException(
-            specificError ?? apiMessage ?? 'Error de validación');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(apiMessage ?? 'Usuario no autenticado');
-      }
-      throw ApiException(
-          apiMessage ?? 'Error al actualizar datero: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al actualizar el datero',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

@@ -45,12 +45,11 @@ class App extends ConsumerWidget {
           
           // En modo debug, agregar overlay de información
           if (kDebugMode) {
+            final media = MediaQuery.of(context);
+            final safeScale = MediaQuery.textScaleFactorOf(context).clamp(0.8, 1.2);
             result = MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                textScaler: MediaQuery.of(context).textScaler.clamp(
-                  minScaleFactor: 0.8,
-                  maxScaleFactor: 1.2,
-                ),
+              data: media.copyWith(
+                textScaler: TextScaler.linear(safeScale),
               ),
               child: result,
             );

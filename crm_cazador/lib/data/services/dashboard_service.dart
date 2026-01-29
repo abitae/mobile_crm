@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
 import '../../core/logging/app_logger.dart';
 
 /// Modelo de estadísticas del dashboard
@@ -107,6 +108,11 @@ class DashboardService {
         AppLogger.error('Respuesta sin datos', tag: 'DashboardService');
         throw ApiException('Respuesta inválida del servidor');
       }
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al obtener estadisticas del dashboard';
+        throw ApiException(message);
+      }
       
       AppLogger.debug('📊 [DashboardService] Estructura de respuesta', tag: 'DashboardService', data: {
         'keys': responseData.keys.toList(),
@@ -122,24 +128,9 @@ class DashboardService {
           'status_code': e.response?.statusCode,
           'response_data': e.response?.data,
         });
-      
-      final responseData = e.response?.data;
-      String? errorMessage;
-      
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-      
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Endpoint de dashboard no encontrado');
-      } else if (e.response?.statusCode == 500) {
-        throw ApiException(errorMessage ?? 'Error interno del servidor');
-      }
-      
-      throw ApiException(
-        errorMessage ?? 'Error al obtener estadísticas: ${e.message}',
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener estadisticas del dashboard',
       );
     } catch (e, stackTrace) {
       AppLogger.error('❌ [DashboardService] Error inesperado', tag: 'DashboardService', 

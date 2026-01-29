@@ -202,6 +202,17 @@ class ApiService {
     Options? options,
   }) async {
     await init();
+    if (data is Map<String, dynamic> &&
+        (path == '/cazador/clients' || path == '/cazador/clients/validate')) {
+      final currentMode = data['create_mode'];
+      final normalizedMode = currentMode?.toString().trim();
+      if (normalizedMode == null ||
+          normalizedMode.isEmpty ||
+          normalizedMode.toLowerCase() == 'null') {
+        data['create_mode'] = 'dni';
+      }
+      debugPrint('🧾 [ApiService] POST $path payload: $data');
+    }
     return await dio.post(
       path,
       data: data,

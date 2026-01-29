@@ -9,6 +9,69 @@ import '../../core/logging/app_logger.dart';
 
 /// Servicio para gestión de clientes (Cazador)
 class ClientService {
+  static Map<String, dynamic> _ensureCreateMode(
+    Map<String, dynamic> payload,
+    String? createMode,
+  ) {
+    final normalizedMode = (createMode ?? '').trim().isNotEmpty
+        ? createMode!.trim().toLowerCase()
+        : 'dni';
+    payload['create_mode'] = normalizedMode;
+    return payload;
+  }
+
+  static String? _buildDuplicateOwnerMessage(Map<String, dynamic>? duplicateOwner) {
+    if (duplicateOwner == null) return null;
+    final ownerName = duplicateOwner['name']?.toString().trim();
+    final field = duplicateOwner['field']?.toString().trim();
+    if (ownerName == null || ownerName.isEmpty || field == null || field.isEmpty) {
+      return null;
+    }
+    if (field == 'phone') {
+      return 'Telefono registrado por "$ownerName"';
+    }
+    if (field == 'document_number') {
+      return 'DNI registrado por "$ownerName"';
+    }
+    return '$field registrado por "$ownerName"';
+  }
+
+  static String? _extractValidationMessage(
+    Map<String, dynamic>? errors,
+    String? apiMessage,
+  ) {
+    if (errors == null || errors.isEmpty) {
+      return apiMessage;
+    }
+
+    final duplicateOwner = errors['duplicate_owner'] as Map<String, dynamic>?;
+    final duplicateMessage = _buildDuplicateOwnerMessage(duplicateOwner);
+    if (duplicateMessage != null) {
+      return duplicateMessage;
+    }
+
+    final nestedErrors = errors['errors'];
+    if (nestedErrors is Map<String, dynamic> && nestedErrors.isNotEmpty) {
+      final firstError = nestedErrors.values.first;
+      if (firstError is List && firstError.isNotEmpty) {
+        return firstError.first.toString();
+      }
+      if (firstError is String) {
+        return firstError;
+      }
+    }
+
+    final firstError = errors.values.first;
+    if (firstError is List && firstError.isNotEmpty) {
+      return firstError.first.toString();
+    }
+    if (firstError is String) {
+      return firstError;
+    }
+
+    return apiMessage;
+  }
+
   /// Obtener lista de clientes paginada
   static Future<PaginatedResponse<ClientModel>> getClients({
     int page = 1,
@@ -224,27 +287,52 @@ class ClientService {
   /// Crear nuevo cliente
   static Future<ClientModel> createClient(ClientModel client) async {
     try {
+      // Construir payload respetando reglas de create_mode (dni|phone)
+      final payload = _ensureCreateMode(client.toCreateJson(), client.createMode);
+      debugPrint('📤 [ClientService] createClient payload: $payload');
+
       final response = await ApiService.post(
         '/cazador/clients',
-        data: client.toCreateJson(),
+        data: payload,
+        queryParameters: {
+          'create_mode': payload['create_mode'],
+        },
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        debugPrint('❌ [ClientService] createClient success=false data=$responseData');
+        final message = responseData['message'] as String? ??
+            'Error al crear el cliente en Cazador';
+        final errors = responseData['errors'] as Map<String, dynamic>?;
+        final specificError = _extractValidationMessage(errors, message);
+        throw ApiException(specificError ?? message, errors: errors);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final clientData = dataObj?['client'] ?? dataObj ?? responseData;
 
-      return ClientModel.fromJson(clientData as Map<String, dynamic>);
+      if (clientData is! Map<String, dynamic>) {
+        throw ApiException('Respuesta inválida del servidor al crear cliente');
+      }
+      if (clientData['id'] == null) {
+        throw ApiException(
+          responseData['message'] as String? ??
+              'Respuesta inválida: id del cliente vacío',
+        );
+      }
+      return ClientModel.fromJson(clientData);
     } on DioException catch (e) {
       final responseData = e.response?.data;
       String? apiMessage;
       if (responseData is Map<String, dynamic>) {
         apiMessage = responseData['message'] as String?;
       }
+      debugPrint('❌ [ClientService] createClient error status=${e.response?.statusCode} data=$responseData');
 
       if (e.response?.statusCode == 422) {
         final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(specificError ?? apiMessage ?? 'Error de validación');
+        final specificError = _extractValidationMessage(errors, apiMessage);
+        throw ApiException(specificError ?? 'Error de validación', errors: errors, statusCode: 422);
       } else if (e.response?.statusCode == 401) {
         throw ApiException(apiMessage ?? 'Usuario no autenticado');
       } else if (e.response?.statusCode == 429) {
@@ -263,22 +351,40 @@ class ClientService {
     ClientModel client,
   ) async {
     try {
+      final payload = _ensureCreateMode(client.toPartialJson(), client.createMode);
+      debugPrint('📤 [ClientService] updateClient payload (id=$id): $payload');
+
       final response = await ApiService.patch(
         '/cazador/clients/$id',
-        data: client.toPartialJson(),
+        data: payload,
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al actualizar el cliente en Cazador';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final clientData = dataObj?['client'] ?? dataObj ?? responseData;
 
-      return ClientModel.fromJson(clientData as Map<String, dynamic>);
+      if (clientData is! Map<String, dynamic>) {
+        throw ApiException('Respuesta inválida del servidor al actualizar cliente');
+      }
+      if (clientData['id'] == null) {
+        throw ApiException(
+          responseData['message'] as String? ??
+              'Respuesta inválida: id del cliente vacío',
+        );
+      }
+      return ClientModel.fromJson(clientData);
     } on DioException catch (e) {
       final responseData = e.response?.data;
       String? apiMessage;
       if (responseData is Map<String, dynamic>) {
         apiMessage = responseData['message'] as String?;
       }
+      debugPrint('❌ [ClientService] updateClient error status=${e.response?.statusCode} data=$responseData');
 
       if (e.response?.statusCode == 404) {
         throw ApiException(apiMessage ?? 'Cliente no encontrado');
@@ -286,8 +392,8 @@ class ClientService {
         throw ApiException(apiMessage ?? 'No tienes permiso para acceder a este cliente');
       } else if (e.response?.statusCode == 422) {
         final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(specificError ?? apiMessage ?? 'Error de validación');
+        final specificError = _extractValidationMessage(errors, apiMessage);
+        throw ApiException(specificError ?? 'Error de validación', errors: errors, statusCode: 422);
       } else if (e.response?.statusCode == 401) {
         throw ApiException(apiMessage ?? 'Usuario no autenticado');
       }
@@ -295,6 +401,76 @@ class ClientService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
+    }
+  }
+
+  /// Validar payload de cliente sin persistir (POST /clients/validate)
+  /// Lanza ApiException si hay errores de validación.
+  static Future<void> validateClient(ClientModel client) async {
+    try {
+      final payload = _ensureCreateMode(client.toCreateJson(), client.createMode);
+      debugPrint('📤 [ClientService] validateClient payload: $payload');
+
+      final response = await ApiService.post(
+        '/cazador/clients/validate',
+        data: payload,
+        queryParameters: {
+          'create_mode': payload['create_mode'],
+        },
+      );
+
+      final responseData = response.data as Map<String, dynamic>?;
+      if (responseData == null) {
+        throw ApiException('Respuesta vacía del servidor al validar cliente');
+      }
+
+      final data = responseData['data'] as Map<String, dynamic>?;
+      final valid = data?['valid'] as bool? ?? false;
+
+      if (responseData['success'] == false && data == null) {
+        final errors = responseData['errors'] as Map<String, dynamic>? ?? {};
+        final message = _extractValidationMessage(errors, responseData['message'] as String?);
+        throw ApiException(
+          message ?? 'Error de validación de cliente',
+          errors: errors,
+          statusCode: 422,
+        );
+      }
+
+      if (!valid) {
+        final dataErrors = data?['errors'] as Map<String, dynamic>? ?? {};
+        final duplicateOwner = data?['duplicate_owner'] as Map<String, dynamic>?;
+        final errors = <String, dynamic>{
+          'errors': dataErrors,
+          if (duplicateOwner != null) 'duplicate_owner': duplicateOwner,
+        };
+        final message = _extractValidationMessage(errors, responseData['message'] as String?);
+        throw ApiException(
+          message ?? 'Error de validación de cliente',
+          errors: errors,
+          statusCode: 422,
+        );
+      }
+    } on DioException catch (e) {
+      final responseData = e.response?.data;
+      String? apiMessage;
+      if (responseData is Map<String, dynamic>) {
+        apiMessage = responseData['message'] as String?;
+      }
+      debugPrint('❌ [ClientService] validateClient error status=${e.response?.statusCode} data=$responseData');
+      if (e.response?.statusCode == 422 && responseData is Map<String, dynamic>) {
+        final errors = responseData['errors'] as Map<String, dynamic>?;
+        final specificError = _extractValidationMessage(errors, apiMessage);
+        throw ApiException(
+          specificError ?? 'Error de validación de cliente',
+          errors: errors,
+          statusCode: 422,
+        );
+      }
+      throw ApiException(apiMessage ?? 'Error al validar cliente: ${e.message}');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Error inesperado al validar cliente: ${e.toString()}');
     }
   }
 

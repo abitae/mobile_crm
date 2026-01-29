@@ -5,6 +5,7 @@ import '../models/project_model.dart';
 import '../models/unit_model.dart';
 import '../models/api_response.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
 
 /// Servicio para gestión de proyectos (Cazador)
 class ProjectService {
@@ -80,6 +81,11 @@ class ProjectService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al listar proyectos del cazador';
+        throw ApiException(message);
+      }
       return PaginatedResponse.fromJson(
         responseData,
         (json) {
@@ -90,18 +96,10 @@ class ProjectService {
         },
       );
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener proyectos: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al listar proyectos del cazador',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -134,25 +132,20 @@ class ProjectService {
       );
       
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al obtener detalle del proyecto';
+        throw ApiException(message);
+      }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
       final projectData = dataObj?['project'] ?? dataObj ?? responseData;
 
       return ProjectModel.fromJson(projectData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 400) {
-        throw ApiException(errorMessage ?? 'ID de proyecto inválido');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Proyecto no encontrado');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener proyecto: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener detalle del proyecto',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -195,6 +188,11 @@ class ProjectService {
       );
 
       final responseData = response.data as Map<String, dynamic>;
+      if (responseData['success'] == false) {
+        final message = responseData['message'] as String? ??
+            'Error al listar unidades del proyecto';
+        throw ApiException(message);
+      }
       
       // Según la documentación, la estructura es:
       // {
@@ -259,20 +257,10 @@ class ProjectService {
       
       return result;
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 400) {
-        throw ApiException(errorMessage ?? 'ID de proyecto inválido');
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Proyecto no encontrado');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener unidades: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al listar unidades del proyecto',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

@@ -208,24 +208,9 @@ class _ActivityFormScreenState extends ConsumerState<ActivityFormScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        // Mostrar mensaje de error más descriptivo
-        String errorMessage = e.message;
-        
-        // Mejorar mensajes de error comunes
-        if (errorMessage.toLowerCase().contains('validation') || 
-            errorMessage.toLowerCase().contains('validación')) {
-          errorMessage = 'Error de validación: $errorMessage';
-        } else if (errorMessage.toLowerCase().contains('unauthorized') ||
-                   errorMessage.toLowerCase().contains('no autenticado')) {
-          errorMessage = 'Sesión expirada. Por favor inicia sesión nuevamente';
-        } else if (errorMessage.toLowerCase().contains('not found') ||
-                   errorMessage.toLowerCase().contains('no encontrado')) {
-          errorMessage = 'Cliente no encontrado';
-        }
-        
         CustomSnackbar.show(
           context,
-          errorMessage,
+          e.message,
           type: SnackbarType.error,
         );
       }

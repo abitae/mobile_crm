@@ -3,6 +3,7 @@ import 'api_service.dart';
 import 'storage_service.dart';
 import '../models/user_model.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
 
 /// Servicio de autenticación para Cazador
 class AuthService {
@@ -63,29 +64,10 @@ class AuthService {
         'token': token,
       };
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Credenciales inválidas');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(
-          errorMessage ?? 'Acceso denegado. Solo usuarios con rol Administrador, Lider o Cazador pueden acceder.',
-        );
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        final specificError = errors?.values.first?.first.toString();
-        throw ApiException(
-          specificError ?? errorMessage ?? 'Error de validación',
-        );
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(errorMessage ?? 'Error de conexión. Verifica tu internet.');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al iniciar sesión',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -119,15 +101,10 @@ class AuthService {
 
       return UserModel.fromJson(userData as Map<String, dynamic>);
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        final responseData = e.response?.data;
-        String? errorMessage;
-        if (responseData is Map<String, dynamic>) {
-          errorMessage = responseData['message'] as String?;
-        }
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      }
-      return null;
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al obtener el usuario autenticado',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       return null;
@@ -159,15 +136,10 @@ class AuthService {
 
       return null;
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        final responseData = e.response?.data;
-        String? errorMessage;
-        if (responseData is Map<String, dynamic>) {
-          errorMessage = responseData['message'] as String?;
-        }
-        throw ApiException(errorMessage ?? 'Token inválido o expirado');
-      }
-      return null;
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Token inválido o expirado',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       return null;
@@ -190,32 +162,10 @@ class AuthService {
         },
       );
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-        
-        // Si hay errores de validación, extraer el primer error
-        if (responseData['errors'] != null) {
-          final errors = responseData['errors'] as Map<String, dynamic>?;
-          if (errors != null && errors.isNotEmpty) {
-            final firstErrorList = errors.values.first;
-            if (firstErrorList is List && firstErrorList.isNotEmpty) {
-              errorMessage = firstErrorList.first.toString();
-            }
-          }
-        }
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 422) {
-        throw ApiException(errorMessage ?? 'Error de validación');
-      } else if (e.response?.statusCode == 500) {
-        throw ApiException(errorMessage ?? 'Error al cambiar la contraseña');
-      }
-      throw ApiException(errorMessage ?? 'Error de conexión. Verifica tu internet.');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: 'Error al cambiar la contraseña',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../models/document_search_response.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
 
 /// Servicio para búsqueda de documentos (DNI)
 class DocumentService {
@@ -116,23 +117,11 @@ class DocumentService {
         }
         
         throw ApiException(detailedMessage);
-      } else if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'No se encontró información para el documento proporcionado');
-      } else if (e.response?.statusCode == 422) {
-        final errors = e.response?.data['errors'] as Map<String, dynamic>?;
-        if (errors != null && errors.isNotEmpty) {
-          final firstError = errors.values.first;
-          if (firstError is List && firstError.isNotEmpty) {
-            errorMessage = firstError.first.toString();
-          }
-        }
-        throw ApiException(errorMessage ?? 'Error de validación');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Límite de solicitudes excedido. Intenta más tarde.');
       }
-      throw ApiException(errorMessage ?? 'Error al buscar documento: ${e.message}');
+      throw ExceptionHelper.fromDioException(
+        e,
+        defaultMessage: errorMessage ?? 'Error al buscar documento',
+      );
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
