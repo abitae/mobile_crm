@@ -30,7 +30,8 @@ class ClientCard extends StatelessWidget {
     return RepaintBoundary(
       child: AnimatedCard(
         child: Card(
-        elevation: 4,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.08),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

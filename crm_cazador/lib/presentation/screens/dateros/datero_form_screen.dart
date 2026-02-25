@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../data/models/datero_model.dart';
+import '../../../data/models/city_model.dart';
 import '../../../data/services/datero_service.dart';
 import '../../providers/datero_provider.dart';
+import '../../providers/city_provider.dart';
 import '../../../core/exceptions/api_exception.dart';
 import '../../../data/services/document_service.dart';
 
@@ -33,6 +35,7 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
   bool _isActive = true;
   bool _initializedFromServer = false;
   bool _isSearchingDocument = false;
+  int? _selectedCityId;
 
   @override
   void initState() {
@@ -56,6 +59,7 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
         _cuentaController.text = datero.cuentaBancaria ?? '';
         _cciController.text = datero.cciBancaria ?? '';
         _isActive = datero.isActive;
+        _selectedCityId = datero.cityId;
         _initializedFromServer = true;
       });
     } on ApiException catch (e) {
@@ -89,6 +93,12 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCityId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La ciudad es obligatoria')),
+      );
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -122,6 +132,7 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
           ? null
           : _cciController.text.trim(),
       isActive: _isActive,
+      cityId: _selectedCityId,
     );
 
     try {
@@ -249,19 +260,33 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.dateroId != null;
+    final citiesAsync = ref.watch(citiesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(isEdit ? 'Editar Datero' : 'Nuevo Datero'),
       ),
-      body: AbsorbPointer(
-        absorbing: _isSubmitting || (isEdit && !_initializedFromServer),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
+      body: citiesAsync.when(
+        data: (cities) => AbsorbPointer(
+          absorbing: _isSubmitting || (isEdit && !_initializedFromServer),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: _buildFormFields(cities),
+              ),
+            ),
+          ),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error al cargar ciudades: $e')),
+      ),
+    );
+  }
+
+  List<Widget> _buildFormFields(List<CityModel> cities) {
+    return [
                 // DNI primero
                 TextFormField(
                   controller: _dniController,
@@ -351,6 +376,28 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
                     if (value.trim().length > 20) {
                       return 'El teléfono no puede exceder 20 caracteres';
                     }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  value: _selectedCityId,
+                  decoration: const InputDecoration(
+                    labelText: 'Ciudad *',
+                    prefixIcon: Icon(Icons.location_city),
+                  ),
+                  hint: const Text('Seleccione ciudad'),
+                  items: cities
+                      .map((c) => DropdownMenuItem<int>(
+                            value: c.id,
+                            child: Text(c.name),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() => _selectedCityId = value);
+                  },
+                  validator: (value) {
+                    if (value == null) return 'La ciudad es obligatoria';
                     return null;
                   },
                 ),
@@ -474,15 +521,10 @@ class _DateroFormScreenState extends ConsumerState<DateroFormScreen> {
                             ),
                           )
                         : const Icon(Icons.save),
-                    label: Text(isEdit ? 'Guardar Cambios' : 'Crear Datero'),
+                    label: Text(widget.dateroId != null ? 'Guardar Cambios' : 'Crear Datero'),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+              ];
   }
 }
 

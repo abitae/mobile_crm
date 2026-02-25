@@ -166,10 +166,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with SingleTickerProvid
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Barra de búsqueda estilo referencia
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                readOnly: true,
+                onTap: () => context.push('/clients'),
+                decoration: InputDecoration(
+                  hintText: 'Buscar...',
+                  hintStyle: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    fontSize: 15,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 22,
+                    color: colorScheme.primary,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ),
+            ),
             // Dashboard de estadísticas
             _DashboardWidget(),
           ],
@@ -376,15 +409,34 @@ class _DashboardWidgetState extends ConsumerState<_DashboardWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            // Estadísticas en grid
+            const SizedBox(height: 20),
+            // Gráfico de estados de reserva (arriba)
+            if (stats?.reservations.byStatus.isNotEmpty == true) ...[
+              _ReservationsStatusChart(
+                byStatus: stats!.reservations.byStatus,
+                total: stats.reservations.total,
+              ),
+              const SizedBox(height: 24),
+              Divider(height: 1, color: colorScheme.outlineVariant.withOpacity(0.5)),
+              const SizedBox(height: 20),
+            ],
+            // Overview: título + 3 columnas (debajo del gráfico)
+            Text(
+              'Overview',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: _StatItem(
-                    title: 'Clientes',
+                    title: 'Total Clientes',
                     value: stats?.clients.total.toString() ?? '0',
-                    icon: Icons.people,
+                    icon: Icons.people_outlined,
                     color: colorScheme.primary,
                     isLoading: dashboardState.isLoading && stats == null,
                   ),
@@ -392,7 +444,7 @@ class _DashboardWidgetState extends ConsumerState<_DashboardWidget> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatItem(
-                    title: 'Dateros',
+                    title: 'Total Dateros',
                     value: stats?.dateros.total.toString() ?? '0',
                     icon: Icons.person_search,
                     color: colorScheme.secondary,
@@ -402,25 +454,15 @@ class _DashboardWidgetState extends ConsumerState<_DashboardWidget> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatItem(
-                    title: 'Reservas',
+                    title: 'Total Reservas',
                     value: stats?.reservations.total.toString() ?? '0',
-                    icon: Icons.receipt_long,
+                    icon: Icons.receipt_long_outlined,
                     color: colorScheme.tertiary,
                     isLoading: dashboardState.isLoading && stats == null,
                   ),
                 ),
               ],
             ),
-            // Gráfico de estados de reserva
-            if (stats?.reservations.byStatus.isNotEmpty == true) ...[
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 16),
-              _ReservationsStatusChart(
-                byStatus: stats!.reservations.byStatus,
-                total: stats.reservations.total,
-              ),
-            ],
           ],
         ),
       ),
@@ -428,7 +470,7 @@ class _DashboardWidgetState extends ConsumerState<_DashboardWidget> {
   }
 }
 
-/// Item de estadística compacto para el card
+/// Item de estadística estilo referencia ADOL: fondo claro, bordes redondeados, sombra suave
 class _StatItem extends StatelessWidget {
   final String title;
   final String value;
@@ -447,65 +489,55 @@ class _StatItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(18.0),
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.12),
-            color.withOpacity(0.06),
-          ],
-        ),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.25),
-          width: 1.5,
-        ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  color.withOpacity(0.2),
-                  color.withOpacity(0.15),
-                ],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            child: Icon(
-              icon,
-              size: 28,
-              color: color,
-            ),
+                child: Icon(
+                  icon,
+                  size: 24,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           if (isLoading)
             SizedBox(
-              width: 20,
-              height: 20,
+              width: 24,
+              height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
                 valueColor: AlwaysStoppedAnimation<Color>(color),
@@ -516,20 +548,19 @@ class _StatItem extends StatelessWidget {
               value,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: color,
-                fontSize: 28,
+                color: colorScheme.onSurface,
+                fontSize: 26,
                 letterSpacing: -0.5,
               ),
             ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             title,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
               fontSize: 13,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

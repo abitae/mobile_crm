@@ -20,6 +20,7 @@ class ClientsState {
   final String? typeFilter;
   final String? sourceFilter;
   final String? createTypeFilter; // propio o datero
+  final int? cityIdFilter;
 
   ClientsState({
     List<ClientModel>? clients,
@@ -34,6 +35,7 @@ class ClientsState {
     this.typeFilter,
     this.sourceFilter,
     this.createTypeFilter,
+    this.cityIdFilter,
   })  : clients = clients ?? const [],
         isLoading = isLoading ?? false,
         isLoadingMore = isLoadingMore ?? false,
@@ -54,6 +56,7 @@ class ClientsState {
     String? typeFilter,
     String? sourceFilter,
     String? createTypeFilter,
+    int? cityIdFilter,
   }) {
     return ClientsState(
       clients: clients ?? this.clients,
@@ -68,6 +71,7 @@ class ClientsState {
       typeFilter: typeFilter ?? this.typeFilter,
       sourceFilter: sourceFilter ?? this.sourceFilter,
       createTypeFilter: createTypeFilter ?? this.createTypeFilter,
+      cityIdFilter: cityIdFilter ?? this.cityIdFilter,
     );
   }
 }
@@ -108,6 +112,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         type: state.typeFilter,
         source: state.sourceFilter,
         createType: filterCreateType,
+        cityId: state.cityIdFilter,
       );
 
       // Prevenir duplicados: si no es refresh, filtrar clientes que ya existen
@@ -159,6 +164,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
         type: state.typeFilter,
         source: state.sourceFilter,
         createType: state.createTypeFilter,
+        cityId: state.cityIdFilter,
       );
 
       // Prevenir duplicados: filtrar clientes que ya existen
@@ -199,18 +205,19 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
     String? type,
     String? source,
     String? createType,
+    int? cityId,
   }) {
-    debugPrint('🔧 [ClientsNotifier] Aplicando filtros - createType: $createType');
+    debugPrint('🔧 [ClientsNotifier] Aplicando filtros - createType: $createType, cityId: $cityId');
     
     state = state.copyWith(
       statusFilter: status,
       typeFilter: type,
       sourceFilter: source,
       createTypeFilter: createType,
+      cityIdFilter: cityId,
       currentPage: 1,
     );
     
-    // Forzar refresh siempre, pasando el createType directamente para evitar problemas de timing
     loadClients(refresh: true, createType: createType);
   }
 
@@ -222,6 +229,7 @@ class ClientsNotifier extends StateNotifier<ClientsState> {
       typeFilter: null,
       sourceFilter: null,
       createTypeFilter: null,
+      cityIdFilter: null,
       currentPage: 1,
     );
     loadClients(refresh: true);

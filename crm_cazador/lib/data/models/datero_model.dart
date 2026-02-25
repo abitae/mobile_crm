@@ -12,6 +12,7 @@ class DateroModel {
   final String? cciBancaria;
   final bool isActive;
   final Map<String, dynamic>? lider;
+  final int? cityId;
 
   DateroModel({
     this.id,
@@ -26,6 +27,7 @@ class DateroModel {
     this.cciBancaria,
     this.isActive = true,
     this.lider,
+    this.cityId,
   });
 
   factory DateroModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class DateroModel {
       cciBancaria: json['cci_bancaria'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       lider: json['lider'] as Map<String, dynamic>?,
+      cityId: json['city_id'] as int?,
     );
   }
 
@@ -58,6 +61,7 @@ class DateroModel {
         'cuenta_bancaria': cuentaBancaria,
       if (cciBancaria != null && cciBancaria!.isNotEmpty)
         'cci_bancaria': cciBancaria,
+      if (cityId != null) 'city_id': cityId,
     };
   }
 
@@ -79,6 +83,7 @@ class DateroModel {
       map['cci_bancaria'] = cciBancaria;
     }
     map['is_active'] = isActive;
+    if (cityId != null) map['city_id'] = cityId;
 
     return map;
   }
@@ -96,6 +101,7 @@ class DateroModel {
     String? cciBancaria,
     bool? isActive,
     Map<String, dynamic>? lider,
+    int? cityId,
   }) {
     return DateroModel(
       id: id ?? this.id,
@@ -110,6 +116,7 @@ class DateroModel {
       cciBancaria: cciBancaria ?? this.cciBancaria,
       isActive: isActive ?? this.isActive,
       lider: lider ?? this.lider,
+      cityId: cityId ?? this.cityId,
     );
   }
 }

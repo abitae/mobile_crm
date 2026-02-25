@@ -1,16 +1,19 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/client_provider.dart';
-import '../../widgets/common/loading_indicator.dart';
+import '../../providers/city_provider.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/skeletons/client_list_skeleton.dart';
 import '../../widgets/animations/stagger_animation.dart';
 import '../../theme/app_icons.dart';
-import '../../../data/models/client_options.dart';
+import '../../../data/services/client_service.dart';
 import 'widgets/client_card.dart';
 
 /// Pantalla de listado de clientes
@@ -24,24 +27,22 @@ class ClientsListScreen extends ConsumerStatefulWidget {
 class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
+  bool _isExporting = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Listener para actualizar el UI cuando cambia el texto
-    _searchController.addListener(() {
-      setState(() {}); // Reconstruir para actualizar el suffixIcon
-    });
-    
-    // Escuchar cambios en el estado del notifier
+    _searchController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifier = ref.read(clientsNotifierProvider);
       notifier.addListener((state) {
-        if (mounted) {
-          setState(() {});
-        }
+        if (mounted) setState(() {});
       });
+      // Por defecto mostrar "Propios"; nunca mostrar "Todos" en esta pantalla
+      if (notifier.currentState.createTypeFilter == null) {
+        notifier.setFilters(createType: 'propio');
+      }
     });
   }
 
@@ -63,6 +64,66 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
     }
   }
 
+  static String _csvEscape(String value) {
+    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
+
+  Future<void> _exportClients(BuildContext context, ClientsState clientsState) async {
+    if (_isExporting) return;
+    setState(() => _isExporting = true);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Exportando clientes...'), duration: Duration(seconds: 2)),
+    );
+    try {
+      final clients = await ClientService.getAllClientsForExport(
+        createType: clientsState.createTypeFilter,
+        cityId: clientsState.cityIdFilter,
+      );
+      final citiesAsync = ref.read(citiesProvider);
+      final cities = citiesAsync.value ?? [];
+      final cityNames = {for (var c in cities) c.id: c.name};
+      final buffer = StringBuffer();
+      buffer.writeln('Nombre,Telefono,Ciudad,Tipo');
+      for (final c in clients) {
+        final city = c.cityId != null ? (cityNames[c.cityId] ?? '') : '';
+        buffer.writeln([
+          _csvEscape(c.name),
+          _csvEscape(c.phone ?? ''),
+          _csvEscape(city),
+          _csvEscape(c.type),
+        ].join(','));
+      }
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/clientes_export.csv');
+      await file.writeAsString(buffer.toString());
+      if (!mounted) return;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        subject: 'Clientes exportados',
+        text: 'Exportación de clientes (${clients.length} registros)',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Exportados ${clients.length} clientes')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al exportar: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +135,22 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
       appBar: AppBar(
         title: const Text('Clientes'),
         actions: [
+          IconButton(
+            icon: _isExporting
+                ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.file_download_outlined),
+            onPressed: _isExporting
+                ? null
+                : () => _exportClients(context, clientsState),
+            tooltip: 'Exportar clientes',
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
@@ -163,57 +240,103 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
               },
             ),
           ),
-          // Filtro de tipo de creación mejorado
+          // Contenedor de filtros (tema unificado)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Builder(
-              builder: (context) {
-                final currentFilter = clientsState.createTypeFilter;
-                final theme = Theme.of(context);
-                
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _AnimatedFilterButton(
-                        label: 'Todos',
-                        isSelected: currentFilter == null,
-                        onTap: () {
+            child: Container(
+              padding: const EdgeInsets.all(14.0),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLow.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.12),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Tipo: Propios | Dateados
+                  Builder(
+                    builder: (context) {
+                      final currentFilter = clientsState.createTypeFilter ?? 'propio';
+                      final colorScheme = Theme.of(context).colorScheme;
+                      return SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment<String>(
+                            value: 'propio',
+                            label: Text('Propios'),
+                            icon: Icon(Icons.person_outline, size: 18),
+                          ),
+                          ButtonSegment<String>(
+                            value: 'datero',
+                            label: Text('Dateados'),
+                            icon: Icon(Icons.people_outline, size: 18),
+                          ),
+                        ],
+                        selected: {currentFilter},
+                        onSelectionChanged: (Set<String> selected) {
+                          final value = selected.first;
                           HapticFeedback.selectionClick();
-                          final notifier = ref.read(clientsNotifierProvider);
-                          notifier.setFilters(createType: null);
+                          ref.read(clientsNotifierProvider).setFilters(createType: value);
                         },
-                        theme: theme,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _AnimatedFilterButton(
-                        label: 'Propio',
-                        isSelected: currentFilter == 'propio',
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          final notifier = ref.read(clientsNotifierProvider);
-                          notifier.setFilters(createType: 'propio');
-                        },
-                        theme: theme,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _AnimatedFilterButton(
-                        label: 'Dateado',
-                        isSelected: currentFilter == 'datero',
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          final notifier = ref.read(clientsNotifierProvider);
-                          notifier.setFilters(createType: 'datero');
-                        },
-                        theme: theme,
-                      ),
-                    ),
-                  ],
-                );
-              },
+                        style: ButtonStyle(
+                          padding: WidgetStateProperty.all(
+                            const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return colorScheme.primaryContainer;
+                            }
+                            return colorScheme.surface;
+                          }),
+                          foregroundColor: WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return colorScheme.onPrimaryContainer;
+                            }
+                            return colorScheme.onSurfaceVariant;
+                          }),
+                          side: WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return BorderSide(
+                                color: colorScheme.primary.withOpacity(0.5),
+                                width: 1.5,
+                              );
+                            }
+                            return BorderSide(
+                              color: colorScheme.outline.withOpacity(0.25),
+                              width: 1,
+                            );
+                          }),
+                          shape: WidgetStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Ciudad
+                  _CityFilterDropdown(
+                    selectedCityId: clientsState.cityIdFilter,
+                    onCityChanged: (id) {
+                      ref.read(clientsNotifierProvider).setFilters(cityId: id);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -228,15 +351,11 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
-          HapticFeedback.mediumImpact();
           context.push('/clients/new');
         },
-        tooltip: 'Agregar Cliente',
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo Cliente'),
-        elevation: 6,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -313,6 +432,142 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Dropdown para filtrar clientes por ciudad (estilo unificado con filtros)
+class _CityFilterDropdown extends ConsumerWidget {
+  final int? selectedCityId;
+  final ValueChanged<int?> onCityChanged;
+
+  const _CityFilterDropdown({
+    required this.selectedCityId,
+    required this.onCityChanged,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final citiesAsync = ref.watch(citiesProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: citiesAsync.when(
+        data: (cities) {
+          return DropdownButtonHideUnderline(
+            child: DropdownButton<int?>(
+              value: selectedCityId,
+              isExpanded: true,
+              isDense: false,
+              hint: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.location_city_outlined,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.8),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Todas las ciudades',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              borderRadius: BorderRadius.circular(12),
+              dropdownColor: colorScheme.surfaceContainerHighest,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: colorScheme.primary,
+              ),
+              items: [
+                DropdownMenuItem<int?>(
+                  value: null,
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_off_outlined, size: 20, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 10),
+                      const Text('Todas las ciudades'),
+                    ],
+                  ),
+                ),
+                ...cities.map(
+                  (c) => DropdownMenuItem<int?>(
+                    value: c.id,
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_city_outlined, size: 20, color: colorScheme.primary.withOpacity(0.8)),
+                        const SizedBox(width: 10),
+                        Text(c.name),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                HapticFeedback.selectionClick();
+                onCityChanged(value);
+              },
+            ),
+          );
+        },
+        loading: () => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Cargando ciudades...',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        error: (e, _) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline, size: 20, color: colorScheme.error),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'No se pudieron cargar ciudades',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

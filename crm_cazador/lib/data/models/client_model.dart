@@ -23,6 +23,9 @@ class ClientModel {
   final DateTime? updatedAt;
   final String? createType;
 
+  /// ID de ciudad (requerido por API en creación/actualización).
+  final int? cityId;
+
   /// Modo de creación según backend: `dni` o `phone`.
   /// - `dni`: document_type y document_number son obligatorios.
   /// - `phone`: DNI es opcional.
@@ -51,6 +54,7 @@ class ClientModel {
     this.createdAt,
     this.updatedAt,
     this.createType,
+    this.cityId,
     this.createMode,
   });
 
@@ -88,6 +92,7 @@ class ClientModel {
           ? DateTime.parse(json['updated_at'] as String)
           : null,
       createType: json['create_type'] as String?,
+      cityId: json['city_id'] as int?,
       createMode: json['create_mode'] as String?,
     );
   }
@@ -110,6 +115,7 @@ class ClientModel {
       'user_id': userId,
       'assigned_advisor_id': assignedAdvisorId,
       if (createType != null) 'create_type': createType,
+      if (cityId != null) 'city_id': cityId,
       if (createMode != null) 'create_mode': createMode,
     };
   }
@@ -152,6 +158,7 @@ class ClientModel {
     map['score'] = score;
     if (notes != null && notes!.isNotEmpty) map['notes'] = notes;
     if (createType != null) map['create_type'] = createType;
+    if (cityId != null) map['city_id'] = cityId;
     return map;
   }
 
@@ -183,6 +190,7 @@ class ClientModel {
       'score': score,
       'notes': notes,
       if (createType != null) 'create_type': createType,
+      if (cityId != null) 'city_id': cityId,
       // Nota: assigned_advisor_id se asigna automáticamente en el backend
     };
 

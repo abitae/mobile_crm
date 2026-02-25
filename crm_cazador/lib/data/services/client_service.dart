@@ -81,6 +81,7 @@ class ClientService {
     String? type,
     String? source,
     String? createType,
+    int? cityId,
   }) async {
     try {
       final queryParams = <String, dynamic>{
@@ -99,6 +100,9 @@ class ClientService {
       }
       if (source != null && source.isNotEmpty) {
         queryParams['source'] = source;
+      }
+      if (cityId != null && cityId > 0) {
+        queryParams['city_id'] = cityId;
       }
       // Manejar createType: si es null, no enviar el parámetro (mostrar todos)
       if (createType != null && createType.isNotEmpty) {
@@ -497,6 +501,29 @@ class ClientService {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
     }
+  }
+
+  /// Obtener todos los clientes para exportar (pagina hasta agotar)
+  static Future<List<ClientModel>> getAllClientsForExport({
+    String? createType,
+    int? cityId,
+  }) async {
+    final list = <ClientModel>[];
+    int page = 1;
+    const perPage = 100;
+    bool hasMore = true;
+    while (hasMore) {
+      final response = await getClients(
+        page: page,
+        perPage: perPage,
+        createType: createType,
+        cityId: cityId,
+      );
+      list.addAll(response.data);
+      hasMore = response.hasMore && (response.data.length == perPage);
+      page++;
+    }
+    return list;
   }
 
   /// Obtener opciones para formularios

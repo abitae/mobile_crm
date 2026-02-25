@@ -102,12 +102,19 @@ class DashboardService {
       
       AppLogger.debug('📥 [DashboardService] Respuesta recibida: ${response.statusCode}');
       
-      final responseData = response.data as Map<String, dynamic>?;
-      
-      if (responseData == null) {
+      final rawData = response.data;
+      if (rawData == null) {
         AppLogger.error('Respuesta sin datos', tag: 'DashboardService');
         throw ApiException('Respuesta inválida del servidor');
       }
+      if (rawData is! Map<String, dynamic>) {
+        AppLogger.error('Respuesta en formato inesperado', tag: 'DashboardService', data: {
+          'data_type': rawData.runtimeType.toString(),
+          'data_value': rawData.toString(),
+        });
+        throw ApiException('Respuesta inválida del servidor');
+      }
+      final responseData = rawData;
       if (responseData['success'] == false) {
         final message = responseData['message'] as String? ??
             'Error al obtener estadisticas del dashboard';

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/client_provider.dart';
+import '../../providers/city_provider.dart';
 import '../../../data/services/client_service.dart';
 import '../../../data/services/document_service.dart';
 import '../../../data/models/client_model.dart';
 import '../../../data/models/client_options.dart';
+import '../../../data/models/city_model.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/skeletons/client_form_skeleton.dart';
 import '../../widgets/common/custom_snackbar.dart';
@@ -38,6 +40,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
   String? _selectedType;
   String? _selectedStatus;
   String? _selectedSource;
+  int? _selectedCityId;
   int _score = 50;
   DateTime? _birthDate;
   bool _isLoading = false;
@@ -109,6 +112,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
       _selectedSource = client.source;
       _score = client.score;
       _birthDate = client.birthDate;
+      _selectedCityId = client.cityId;
       _createMode = client.createMode ??
           (client.documentNumber.isNotEmpty ? 'dni' : 'phone');
       setState(() {
@@ -297,6 +301,15 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
         return;
       }
 
+      if (_selectedCityId == null) {
+        CustomSnackbar.show(
+          context,
+          'La ciudad es requerida',
+          type: SnackbarType.error,
+        );
+        return;
+      }
+
       final client = ClientModel(
         id: widget.clientId ?? 0,
         name: _nameController.text.trim(),
@@ -317,6 +330,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
+        cityId: _selectedCityId,
         createMode: _createMode,
       );
 
@@ -398,6 +412,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
   @override
   Widget build(BuildContext context) {
     final optionsAsync = ref.watch(clientOptionsProvider);
+    final citiesAsync = ref.watch(citiesProvider);
 
     if (!_isInitialized && widget.clientId != null) {
       return const Scaffold(
@@ -410,7 +425,11 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
         title: Text(widget.clientId != null ? 'Editar Cliente' : 'Nuevo Cliente'),
       ),
       body: optionsAsync.when(
-        data: (options) => _buildForm(context, options),
+        data: (options) => citiesAsync.when(
+          data: (cities) => _buildForm(context, options, cities),
+          loading: () => const LoadingIndicator(),
+          error: (err, _) => Center(child: Text('Error ciudades: $err')),
+        ),
         loading: () => const LoadingIndicator(),
         error: (error, _) => Center(
           child: Text('Error: $error'),
@@ -419,7 +438,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
     );
   }
 
-  Widget _buildForm(BuildContext context, ClientOptions options) {
+  Widget _buildForm(BuildContext context, ClientOptions options, List<CityModel> cities) {
     // Inicializar valores por defecto si no están establecidos
     _selectedType ??= 'comprador';
     _selectedStatus ??= 'nuevo';
@@ -737,6 +756,33 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                         vertical: 10,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    value: _selectedCityId,
+                    decoration: const InputDecoration(
+                      labelText: 'Ciudad *',
+                      prefixIcon: Icon(Icons.location_city),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                    hint: const Text('Seleccione ciudad'),
+                    items: cities
+                        .map((c) => DropdownMenuItem<int>(
+                              value: c.id,
+                              child: Text(c.name),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedCityId = value);
+                    },
+                    validator: (value) {
+                      if (value == null) return 'La ciudad es requerida';
+                      return null;
+                    },
                   ),
                 ],
               ),
