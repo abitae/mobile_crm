@@ -52,6 +52,8 @@ class PaginatedResponse<T> {
     required this.perPage,
   });
 
+  bool get hasMore => currentPage < totalPages;
+
   factory PaginatedResponse.fromJson(
     Map<String, dynamic> json,
     T Function(dynamic) fromJsonT,

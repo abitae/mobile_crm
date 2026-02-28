@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import '../../presentation/screens/auth/login_screen.dart';
@@ -48,7 +49,7 @@ final routesProvider = Provider<GoRouter>((ref) {
         return null;
       } catch (e) {
         // Si hay un error, permitir navegación a splash o login
-        print('Error en redirect: $e');
+        debugPrint('Error en redirect: $e');
         final isSplash = state.matchedLocation == '/splash';
         final isLogin = state.matchedLocation == '/login';
         if (isSplash || isLogin) return null;

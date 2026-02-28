@@ -4,6 +4,8 @@ import '../models/commission_model.dart';
 import '../models/commission_stats_model.dart';
 import '../models/api_response.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Servicio para consulta de comisiones
 class CommissionService {
@@ -74,7 +76,9 @@ class CommissionService {
   /// Obtener comisión por ID
   static Future<CommissionModel> getCommission(int id) async {
     try {
+      AppLogger.apiRequest('GET', '/datero/commissions/$id');
       final response = await ApiService.get('/datero/commissions/$id');
+      AppLogger.apiResponse('GET', '/datero/commissions/$id', response.statusCode ?? 200);
       final responseData = response.data as Map<String, dynamic>;
       // Según documentación: { "success": true, "data": { "commission": {...} } }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
@@ -82,20 +86,8 @@ class CommissionService {
 
       return CommissionModel.fromJson(commissionData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Comisión no encontrada');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(errorMessage ?? 'No tienes permiso para acceder a esta comisión');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener comisión: ${e.message}');
+      AppLogger.apiError('GET', '/datero/commissions/$id', e, statusCode: e.response?.statusCode);
+      throw ExceptionHelper.fromDioException(e, defaultMessage: 'Error al obtener comisión');
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');
@@ -105,7 +97,9 @@ class CommissionService {
   /// Obtener estadísticas de comisiones
   static Future<CommissionStatsModel> getStats() async {
     try {
+      AppLogger.apiRequest('GET', '/datero/commissions/stats');
       final response = await ApiService.get('/datero/commissions/stats');
+      AppLogger.apiResponse('GET', '/datero/commissions/stats', response.statusCode ?? 200);
       final responseData = response.data as Map<String, dynamic>;
       // Según documentación: { "success": true, "data": { "stats": {...} } }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
@@ -113,18 +107,8 @@ class CommissionService {
 
       return CommissionStatsModel.fromJson(statsData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener estadísticas: ${e.message}');
+      AppLogger.apiError('GET', '/datero/commissions/stats', e, statusCode: e.response?.statusCode);
+      throw ExceptionHelper.fromDioException(e, defaultMessage: 'Error al obtener estadísticas');
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

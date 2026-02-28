@@ -4,6 +4,8 @@ import '../models/client_model.dart';
 import '../models/api_response.dart';
 import '../models/client_options.dart';
 import '../../core/exceptions/api_exception.dart';
+import '../../core/exceptions/exception_helper.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Servicio para gestión de clientes
 class ClientService {
@@ -35,10 +37,12 @@ class ClientService {
         queryParams['source'] = source;
       }
 
+      AppLogger.apiRequest('GET', '/datero/clients', queryParams: queryParams);
       final response = await ApiService.get(
         '/datero/clients',
         queryParameters: queryParams,
       );
+      AppLogger.apiResponse('GET', '/datero/clients', response.statusCode ?? 200);
 
       final responseData = response.data as Map<String, dynamic>;
       // La respuesta viene con estructura: { "success": true, "data": { "clients": [...], "pagination": {...} } }
@@ -53,20 +57,11 @@ class ClientService {
         },
       );
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 429) {
-        throw ApiException(errorMessage ?? 'Too Many Requests');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener clientes: ${e.message}');
+      AppLogger.apiError('GET', '/datero/clients', e, statusCode: e.response?.statusCode);
+      throw ExceptionHelper.fromDioException(e, defaultMessage: 'Error al obtener clientes');
     } catch (e) {
       if (e is ApiException) rethrow;
+      AppLogger.error('Error inesperado en getClients', tag: 'ClientService', error: e);
       throw ApiException('Error inesperado: ${e.toString()}');
     }
   }
@@ -74,7 +69,9 @@ class ClientService {
   /// Obtener cliente por ID
   static Future<ClientModel> getClient(int id) async {
     try {
+      AppLogger.apiRequest('GET', '/datero/clients/$id');
       final response = await ApiService.get('/datero/clients/$id');
+      AppLogger.apiResponse('GET', '/datero/clients/$id', response.statusCode ?? 200);
       final responseData = response.data as Map<String, dynamic>;
       // Según documentación: { "success": true, "data": { "client": {...} } }
       final dataObj = responseData['data'] as Map<String, dynamic>?;
@@ -82,20 +79,8 @@ class ClientService {
 
       return ClientModel.fromJson(clientData as Map<String, dynamic>);
     } on DioException catch (e) {
-      final responseData = e.response?.data;
-      String? errorMessage;
-      if (responseData is Map<String, dynamic>) {
-        errorMessage = responseData['message'] as String?;
-      }
-
-      if (e.response?.statusCode == 404) {
-        throw ApiException(errorMessage ?? 'Cliente no encontrado');
-      } else if (e.response?.statusCode == 401) {
-        throw ApiException(errorMessage ?? 'Usuario no autenticado');
-      } else if (e.response?.statusCode == 403) {
-        throw ApiException(errorMessage ?? 'No tienes permiso para acceder a este cliente');
-      }
-      throw ApiException(errorMessage ?? 'Error al obtener cliente: ${e.message}');
+      AppLogger.apiError('GET', '/datero/clients/$id', e, statusCode: e.response?.statusCode);
+      throw ExceptionHelper.fromDioException(e, defaultMessage: 'Error al obtener cliente');
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Error inesperado: ${e.toString()}');

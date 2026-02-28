@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/client_provider.dart';
-import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/skeleton_loader.dart';
+import '../../widgets/common/skeletons/client_list_skeleton.dart';
 import '../../widgets/animations/stagger_animation.dart';
 import '../../theme/app_icons.dart';
 import '../../../data/models/client_options.dart';
@@ -235,11 +234,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
 
   Widget _buildBody(ClientsState state) {
     if (state.isLoading && state.clients.isEmpty) {
-      return const LoadingIndicator(
-        useSkeleton: true,
-        skeletonType: SkeletonType.clientCard,
-        itemCount: 5,
-      );
+      return const ClientListSkeleton(itemCount: 5);
     }
 
     if (state.error != null && state.clients.isEmpty) {

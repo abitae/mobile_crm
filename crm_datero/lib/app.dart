@@ -5,6 +5,7 @@ import 'presentation/theme/app_theme.dart';
 import 'config/routes.dart';
 import 'data/services/storage_service.dart';
 import 'data/services/api_service.dart';
+import 'presentation/widgets/connectivity/connectivity_banner.dart';
 
 /// Widget principal de la aplicación
 class App extends ConsumerWidget {
@@ -31,18 +32,23 @@ class App extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         // Configuraciones para depuración
         builder: (context, child) {
-          // En modo debug, agregar overlay de información
+          Widget result = child ?? const SizedBox.shrink();
+          result = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ConnectivityBanner(),
+              Expanded(child: result),
+            ],
+          );
           if (kDebugMode) {
             final media = MediaQuery.of(context);
             final safeScale = MediaQuery.textScaleFactorOf(context).clamp(0.8, 1.2);
-            return MediaQuery(
-              data: media.copyWith(
-                textScaler: TextScaler.linear(safeScale),
-              ),
-              child: child ?? const SizedBox.shrink(),
+            result = MediaQuery(
+              data: media.copyWith(textScaler: TextScaler.linear(safeScale)),
+              child: result,
             );
           }
-          return child ?? const SizedBox.shrink();
+          return result;
         },
       );
     } catch (e, stackTrace) {

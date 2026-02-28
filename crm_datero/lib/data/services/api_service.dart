@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../config/app_config.dart';
 import '../../config/api_config.dart';
 import 'storage_service.dart';
 import 'auth_service.dart';
+import '../interceptors/retry_interceptor.dart';
 
 /// Servicio base para comunicación con la API
 class ApiService {
@@ -25,15 +27,17 @@ class ApiService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        // Optimizaciones de rendimiento
         followRedirects: true,
         maxRedirects: 5,
-        validateStatus: (status) => status != null && status < 500, // Aceptar códigos < 500
-        // Comprimir respuestas si el servidor lo soporta
+        validateStatus: (status) => status != null && status < 500,
         listFormat: ListFormat.multiCompatible,
       ));
 
-      // Interceptor para agregar token automáticamente
+      _dio!.interceptors.add(RetryInterceptor(
+        maxRetries: AppConfig.maxRetryAttempts,
+        baseDelay: const Duration(seconds: 1),
+      ));
+
       _dio!.interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await StorageService.getToken();
@@ -81,20 +85,14 @@ class ApiService {
         },
       ));
 
-      // Interceptor para logging solo en modo debug
-      if (const bool.fromEnvironment('dart.vm.product') == false) {
+      if (kDebugMode) {
         _dio!.interceptors.add(LogInterceptor(
-          requestBody: false, // Desactivar en producción para mejor rendimiento
-          responseBody: false, // Desactivar en producción para mejor rendimiento
+          requestBody: false,
+          responseBody: false,
           error: true,
           requestHeader: false,
           responseHeader: false,
-          logPrint: (obj) {
-            // Solo loggear errores en producción
-            if (obj.toString().contains('ERROR') || obj.toString().contains('Exception')) {
-              print(obj);
-            }
-          },
+          logPrint: (obj) => debugPrint(obj.toString()),
         ));
       }
 

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/commission_provider.dart';
-import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/skeleton_loader.dart';
+import '../../widgets/common/skeletons/commission_list_skeleton.dart';
 import '../../widgets/animations/stagger_animation.dart';
 import '../../../data/models/commission_model.dart';
 import 'package:intl/intl.dart';
@@ -81,11 +80,7 @@ class _CommissionsListScreenState extends ConsumerState<CommissionsListScreen> {
             // Lista de comisiones
             Expanded(
               child: commissionState.isLoading && commissionState.commissions.isEmpty
-                  ? const LoadingIndicator(
-                      useSkeleton: true,
-                      skeletonType: SkeletonType.commissionCard,
-                      itemCount: 5,
-                    )
+                  ? const CommissionListSkeleton(itemCount: 5)
                   : commissionState.error != null && commissionState.commissions.isEmpty
                       ? AppErrorWidget(
                           message: commissionState.error!,
