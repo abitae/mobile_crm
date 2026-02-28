@@ -13,8 +13,8 @@ import { User, ShieldCheck, ChevronRight } from 'lucide-react-native';
 import { colors, spacing, borderRadius } from '../theme';
 
 interface LoginScreenProps {
-  username: string;
-  setUsername: (v: string) => void;
+  email: string;
+  setEmail: (v: string) => void;
   pin: string[];
   isLoggingIn: boolean;
   loginError: string;
@@ -23,15 +23,15 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({
-  username,
-  setUsername,
+  email,
+  setEmail,
   pin,
   isLoggingIn,
   loginError,
   onPinChange,
   onLogin,
 }: LoginScreenProps) {
-  const canSubmit = username.trim().length > 0 && pin.every((d) => d !== '');
+  const canSubmit = email.trim().length > 0 && pin.every((d) => d !== '');
 
   return (
     <KeyboardAvoidingView
@@ -47,7 +47,7 @@ export function LoginScreen({
           </View>
           <Text style={styles.title}>Veridian Mobile</Text>
           <Text style={styles.subtitle}>
-            Ingresa tus credenciales para continuar
+            Correo y PIN de 6 dígitos
           </Text>
         </View>
 
@@ -60,10 +60,11 @@ export function LoginScreen({
             />
             <TextInput
               style={styles.input}
-              placeholder="Usuario"
+              placeholder="Correo electrónico"
               placeholderTextColor={colors.zinc[400]}
-              value={username}
-              onChangeText={setUsername}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -106,7 +107,7 @@ export function LoginScreen({
               </>
             )}
           </Pressable>
-          <Text style={styles.hint}>Pista: demo / 123456</Text>
+          <Text style={styles.hint}>Usa tu correo y PIN de 6 dígitos</Text>
         </View>
       </View>
     </KeyboardAvoidingView>

@@ -4,11 +4,12 @@ import { ArrowLeft } from 'lucide-react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 
 interface AddClientFormProps {
+  cities?: { id: number; name: string }[];
   onBack: () => void;
   onSubmit: (data: { name: string; email: string; phone: string; city: string; type: 'propio' | 'dateado' }) => void;
 }
 
-export function AddClientForm({ onBack, onSubmit }: AddClientFormProps) {
+export function AddClientForm({ cities = [], onBack, onSubmit }: AddClientFormProps) {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [phone, setPhone] = React.useState('');
@@ -47,13 +48,23 @@ export function AddClientForm({ onBack, onSubmit }: AddClientFormProps) {
           keyboardType="phone-pad"
         />
         <Text style={styles.label}>Ciudad</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ej. Lima"
-          placeholderTextColor={colors.zinc[400]}
-          value={city}
-          onChangeText={setCity}
-        />
+        {cities.length > 0 ? (
+          <View style={styles.pickerWrap}>
+            {cities.slice(0, 20).map((c) => (
+              <Pressable key={c.id} onPress={() => setCity(c.name)} style={[styles.option, city === c.name && styles.optionActive]}>
+                <Text style={[styles.optionText, city === c.name && styles.optionTextActive]}>{c.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <TextInput
+            style={styles.input}
+            placeholder="Ej. Lima"
+            placeholderTextColor={colors.zinc[400]}
+            value={city}
+            onChangeText={setCity}
+          />
+        )}
         <Text style={styles.label}>Email (Opcional)</Text>
         <TextInput
           style={styles.input}
@@ -102,6 +113,11 @@ const styles = StyleSheet.create({
   typeBtnActive: { backgroundColor: colors.emerald[500] },
   typeBtnText: { fontSize: 12, fontWeight: '600', color: colors.zinc[600] },
   typeBtnTextActive: { color: colors.white },
+  pickerWrap: { gap: 4 },
+  option: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: borderRadius.sm, backgroundColor: colors.zinc[50] },
+  optionActive: { backgroundColor: colors.emerald[100] },
+  optionText: { fontSize: 12, color: colors.zinc[600] },
+  optionTextActive: { color: colors.emerald[700], fontWeight: '600' },
   submitBtn: { backgroundColor: colors.emerald[500], paddingVertical: spacing.md, borderRadius: borderRadius.xl, alignItems: 'center' },
   submitText: { color: colors.white, fontWeight: '700', fontSize: 14 },
 });

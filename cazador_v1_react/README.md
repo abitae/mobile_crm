@@ -1,6 +1,10 @@
 # cazador_v1_react (Veridian)
 
-App CRM inmobiliario en React Native con Expo. Usa **Development Build** (no Expo Go).
+App CRM inmobiliario en React Native con Expo. Usa **Development Build** (no Expo Go) y se conecta a la **API Cazador** (ver `API-Cazador-Endpoints.md`).
+
+- **Login:** correo electrónico + PIN de 6 dígitos (JWT).
+- **Datos:** clientes, proyectos, dateros y reservas se cargan desde la API.
+- **Base URL por defecto:** `https://v1.lotesenremate.pe/api/cazador` (configurable en `src/config/api.ts`).
 
 ## Requisitos
 

@@ -1,28 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { colors, spacing, borderRadius } from '../../theme';
 import type { Client, Project } from '../../types';
 
+export type UnitOption = { id: number; code?: string; name?: string };
+
 interface AddReservationFormProps {
   clients: Client[];
   projects: Project[];
+  loadUnits?: (projectId: number) => Promise<UnitOption[]>;
   onBack: () => void;
-  onSubmit: (data: { clientId: string; projectId: string; unit: string; date: string; amount: number }) => void;
+  onSubmit: (data: { clientId: string; projectId: string; unitId?: number; unit?: string; date: string; amount: number }) => void;
 }
 
-export function AddReservationForm({ clients, projects, onBack, onSubmit }: AddReservationFormProps) {
-  const [clientId, setClientId] = React.useState('');
-  const [projectId, setProjectId] = React.useState('');
-  const [unit, setUnit] = React.useState('');
-  const [date, setDate] = React.useState('');
-  const [amount, setAmount] = React.useState('');
+export function AddReservationForm({ clients, projects, loadUnits, onBack, onSubmit }: AddReservationFormProps) {
+  const [clientId, setClientId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [unitId, setUnitId] = useState<number | undefined>();
+  const [units, setUnits] = useState<UnitOption[]>([]);
+  const [date, setDate] = useState('');
+  const [amount, setAmount] = useState('');
+
+  useEffect(() => {
+    if (!projectId || !loadUnits) {
+      setUnits([]);
+      setUnitId(undefined);
+      return;
+    }
+    loadUnits(Number(projectId)).then(setUnits).catch(() => setUnits([]));
+  }, [projectId, loadUnits]);
 
   const handleSubmit = () => {
-    if (!clientId || !projectId || !unit.trim() || !date.trim() || !amount.trim()) return;
+    if (!clientId || !projectId || !amount.trim()) return;
     const num = Number(amount);
     if (isNaN(num)) return;
-    onSubmit({ clientId, projectId, unit: unit.trim(), date: date.trim(), amount: num });
+    onSubmit({ clientId, projectId, unitId, date: date.trim(), amount: num });
   };
 
   return (
@@ -51,13 +64,17 @@ export function AddReservationForm({ clients, projects, onBack, onSubmit }: AddR
           ))}
         </View>
         <Text style={styles.label}>Unidad</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ej. A-101"
-          placeholderTextColor={colors.zinc[400]}
-          value={unit}
-          onChangeText={setUnit}
-        />
+        {units.length > 0 ? (
+          <View style={styles.pickerWrap}>
+            {units.map((u) => (
+              <Pressable key={u.id} onPress={() => setUnitId(u.id)} style={[styles.option, unitId === u.id && styles.optionActive]}>
+                <Text style={[styles.optionText, unitId === u.id && styles.optionTextActive]}>{u.code ?? u.name ?? `#${u.id}`}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.hint}>Selecciona un proyecto para cargar unidades</Text>
+        )}
         <Text style={styles.label}>Monto ($)</Text>
         <TextInput
           style={styles.input}
@@ -107,4 +124,5 @@ const styles = StyleSheet.create({
   optionTextActive: { color: colors.blue[700], fontWeight: '600' },
   submitBtn: { backgroundColor: colors.blue[600], paddingVertical: spacing.md, borderRadius: borderRadius.xl, alignItems: 'center' },
   submitText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  hint: { fontSize: 11, color: colors.zinc[400] },
 });
