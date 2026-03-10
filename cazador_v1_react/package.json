@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "prebuild": "expo prebuild",
     "build:dev:android": "eas build --profile development --platform android",
-    "build:dev:ios": "eas build --profile development --platform ios"
+    "build:dev:ios": "eas build --profile development --platform ios",
+    "build:prod:android": "eas build --profile production --platform android",
+    "submit:android": "eas submit --platform android --latest"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -17,6 +19,7 @@
     "expo-asset": "~11.0.5",
     "expo-dev-client": "~5.0.20",
     "expo-status-bar": "~2.0.0",
+    "expo-updates": "~0.27.5",
     "lucide-react-native": "^0.454.0",
     "react": "18.3.1",
     "react-native": "0.76.9",

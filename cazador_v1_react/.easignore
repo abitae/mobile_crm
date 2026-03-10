@@ -1,0 +1,10 @@
+# Reduce tamaño del upload y posibles bloqueos en Windows
+node_modules/
+.git/
+.expo/
+dist/
+*.log
+.DS_Store
+android/
+ios/
+*.tsbuildinfo

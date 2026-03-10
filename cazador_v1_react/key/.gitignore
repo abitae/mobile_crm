@@ -1,0 +1,2 @@
+# **/*.jks flutter build appbundle --release 
+**/*.jks
